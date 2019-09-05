@@ -110,7 +110,7 @@ class Kinect():
         """
         pts1 = coord1[0:3].astype(np.float32)
         pts2 = coord2[0:3].astype(np.float32)
-        print cv2.getAffineTransform(pts1,pts2)
+        print(cv2.getAffineTransform(pts1,pts2))
         return cv2.getAffineTransform(pts1,pts2)
 
 

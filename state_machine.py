@@ -97,8 +97,8 @@ class StateMachine():
                     i = i + 1
                     self.kinect.new_click = False
    
-        print self.kinect.rgb_click_points
-        print self.kinect.depth_click_points
+        print(self.kinect.rgb_click_points)
+        print(self.kinect.depth_click_points)
 
         """TODO Perform camera calibration here"""
 
