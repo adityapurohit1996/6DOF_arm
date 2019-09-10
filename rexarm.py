@@ -24,12 +24,13 @@ class Rexarm():
         self.gripper_state = True
         self.estop = False
         """TODO: Find the physical angle limits of the Rexarm. Remember to keep track of this if you include more motors"""
+        safety_margim = 5
         self.angle_limits = np.array([
-                            [-180, 179.99],
-                            [-180, 179.99],
-                            [-180, 179.99],
-                            [-180, 179.99],
-                            [-180, 179.99],], dtype=np.float)*D2R
+                            [-180+safety_margim, 179.99-safety_margim],
+                            [-25-90+safety_margim, 208-90-safety_margim],
+                            [-110+safety_margim, 100-safety_margim],
+                            [-180+safety_margim, 179.99-safety_margim],
+                            [-125+safety_margim, 120-safety_margim],], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
@@ -157,8 +158,14 @@ class Rexarm():
                 break
 
     def clamp(self, joint_angles):
-        """TODO"""
-        pass
+        for i, joint in enumerate(joint_angles):
+            if joint > self.angle_limits[i][1]:
+                joint_angles[i] = self.angle_limits[i][1]
+            if joint < self.angle_limits[i][0]:
+                joint_angles[i] = self.angle_limits[i][0]
+
+        
+
 
     def get_wrist_pose(self):
         """TODO"""
