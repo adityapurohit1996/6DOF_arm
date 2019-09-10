@@ -38,6 +38,8 @@ class StateMachine():
                 self.estop()
             if(self.next_state == "calibrate"):
                 self.calibrate()
+            if(self.next_state == "execute"):
+                self.execute()
                 
         if(self.current_state == "estop"):
             self.next_state = "estop"
@@ -46,9 +48,27 @@ class StateMachine():
         if(self.current_state == "calibrate"):
             if(self.next_state == "idle"):
                 self.idle()
+        
+        if(self.current_state == "execute"):
+            self.idle()
                
 
     """Functions run for each state"""
+    def execute(self):
+        self.status_message = "State: execute - task 1.2"
+        self.current_state = "execute"
+        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
+                    [-1.0,-0.8,-1.0,-0.5, -1.0],
+                    [-1.0, 0.8, 1.0, 0.5, 1.0],
+                    [1.0, -0.8,-1.0,-0.5, -1.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        for point in waypoints:
+            self.rexarm.set_positions(point)
+            self.rexarm.pause(1)
+
+        self.set_next_state("idle")
+
 
 
     def manual(self):

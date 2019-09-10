@@ -130,6 +130,8 @@ class Gui(QMainWindow):
         self.ui.chk_directcontrol.stateChanged.connect(self.directControlChk)
         self.ui.rdoutStatus.setText("Waiting for input")
 
+        self.ui.btn_exec.clicked.connect(partial(self.sm.set_next_state, "execute"))
+
         """initalize manual control off"""
         self.ui.SliderFrame.setEnabled(False)
 
