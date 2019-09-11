@@ -1,6 +1,7 @@
 import time
 import numpy as np
 
+waypoints_recorded = []
 """
 TODO: Add states and state functions to this class
         to implement all of the required logic for the armlab
@@ -38,6 +39,12 @@ class StateMachine():
                 self.estop()
             if(self.next_state == "calibrate"):
                 self.calibrate()
+            if(self.next_state == "execute"):
+                self.execute()
+            if(self.next_state == "record"):
+                self.record()
+            if(self.next_state == "playback"):
+                self.playback()
                 
         if(self.current_state == "estop"):
             self.next_state = "estop"
@@ -46,9 +53,53 @@ class StateMachine():
         if(self.current_state == "calibrate"):
             if(self.next_state == "idle"):
                 self.idle()
+        
+        if(self.current_state == "execute"):
+            self.idle()
+
+        if(self.current_state == "playback"):
+            if(self.next_state == "idle"):
+                self.idle()   
+                
                
 
     """Functions run for each state"""
+    def execute(self):
+        print(self.rexarm.waypoints_recorded)
+        #wtr = csv.writer(open ('C.csv', 'w'), delimiter=',', lineterminator='\n')
+        #for x in self.rexarm.waypoints_recorded
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.status_message = "State: execute - task 1.2"
+        self.current_state = "execute"
+        """
+        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
+                    [-1.0,-0.8,-1.0,-0.5, -1.0],
+                    [-1.0, 0.8, 1.0, 0.5, 1.0],
+                    [1.0, -0.8,-1.0,-0.5, -1.0],
+                    [playback 0.0, 0.0, 0.0, 0.0, 0.0]])
+        """
+        waypoints = self.rexarm.waypoints_recorded
+        for point in waypoints:
+            print(point)
+            self.rexarm.set_positions(point)
+            self.rexarm.pause(3)
+        self.rexarm.waypoints_recorded = []
+        self.rexarm.set_torque_limits([0/100.0]*self.rexarm.num_joints,update_now = True)
+        self.set_next_state("idle")
+
+    def record(self):
+        print("Made it")
+        print(self.rexarm.get_positions())
+        self.rexarm.waypoints_recorded.append(list(self.rexarm.get_positions()))
+        #self.rexarm.waypoints_recorded = np.array(self.rexarm.waypoints_recorded)
+        print(self.rexarm.waypoints_recorded)
+        self.set_next_state("idle")
+    
+    def playback(self):
+        self.rexarm.set_torque_limits([40/100.0]*self.rexarm.num_joints,update_now = True)
+        self.execute()
+        self.set_next_state("idle")
 
 
     def manual(self):

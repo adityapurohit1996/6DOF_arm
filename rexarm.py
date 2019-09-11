@@ -17,6 +17,8 @@ R2D = 180.0/3.141592
 
 class Rexarm():
     def __init__(self, joints, gripper):
+        """Recorded"""
+        self.waypoints_recorded = []
         self.joints = joints
         self.gripper = gripper
         self.gripper_open_pos = np.deg2rad(-60.0)
