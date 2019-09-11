@@ -118,6 +118,8 @@ class Gui(QMainWindow):
         self.ui.btn_estop.clicked.connect(self.estop)
         self.ui.btnUser1.setText("Calibrate")
         self.ui.btnUser1.clicked.connect(partial(self.sm.set_next_state, "calibrate"))
+        self.ui.btnUser2.clicked.connect(partial(self.sm.set_next_state, "record"))
+        self.ui.btnUser3.clicked.connect(partial(self.sm.set_next_state, "playback"))
         self.ui.sldrBase.valueChanged.connect(self.sliderChange)
         self.ui.sldrShoulder.valueChanged.connect(self.sliderChange)
         self.ui.sldrElbow.valueChanged.connect(self.sliderChange)
