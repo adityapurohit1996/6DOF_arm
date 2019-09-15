@@ -171,4 +171,10 @@ class Rexarm():
 
     def get_wrist_pose(self):
         """TODO"""
-        return [0,0,0,0,0,0]
+        T = FK_dh(self.joint_angles_fb, 1)
+        
+        D = np.dot(T,np.transpose([0, 0, 0, 1]))
+
+        # print(D)
+
+        return [D[0],D[1],D[2],0,0,0]
