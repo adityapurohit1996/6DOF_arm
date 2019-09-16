@@ -173,7 +173,7 @@ class Rexarm():
         """TODO"""
         T = FK_dh(self.joint_angles_fb, 1)
         
-        D = np.dot(T,np.transpose([0, 0, 0, 1]))
+        D = np.dot(T,np.transpose([10, 0, 0, 1]))
 
         # print(D)
 
