@@ -45,6 +45,9 @@ class StateMachine():
                 self.record()
             if(self.next_state == "playback"):
                 self.playback()
+            if(self.next_state == "TP test"):
+                self.TP_test()
+            
                 
         if(self.current_state == "estop"):
             self.next_state = "estop"
@@ -60,32 +63,61 @@ class StateMachine():
         if(self.current_state == "playback"):
             if(self.next_state == "idle"):
                 self.idle()   
+
+        if(self.current_state == "TP test"):
+            if(self.next_state == "idle"):
+                self.idle()
                 
                
 
     """Functions run for each state"""
+    def TP_test(self):
+        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
+                    [-1.0,-0.8,-1.0,-0.5, -1.0],
+                    [-1.0, 0.8, 1.0, 0.5, 1.0]])
+        
+        max_speed = 0.4
+
+        self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
+
+        for i in range(len(waypoints) - 1):
+            self.tp.set_initial_wp(waypoints[i])
+            self.tp.set_final_wp(waypoints[i+1])
+            T = self.tp.calc_time_from_waypoints(max_speed)
+            
+            plan = self.tp.generate_cubic_spline(T)
+
+            print(plan[-1])
+
+            self.tp.execute_plan(plan, 200)
+
     def execute(self):
         print(self.rexarm.waypoints_recorded)
         #wtr = csv.writer(open ('C.csv', 'w'), delimiter=',', lineterminator='\n')
         #for x in self.rexarm.waypoints_recorded
-        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.set_speeds_normalized_global(0.2,update_now=True)
         self.status_message = "State: execute - task 1.2"
         self.current_state = "execute"
-        """
+       
         waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
                     [ 1.0, 0.8, 1.0, 0.5, 1.0],
                     [-1.0,-0.8,-1.0,-0.5, -1.0],
-                    [-1.0, 0.8, 1.0, 0.5, 1.0],
-                    [1.0, -0.8,-1.0,-0.5, -1.0],
-                    [playback 0.0, 0.0, 0.0, 0.0, 0.0]])
-        """
+                    [-1.0, 0.8, 1.0, 0.5, 1.0]])
+                    # [1.0, -0.8,-1.0,-0.5, -1.0],
+                    # [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        """            
         waypoints = self.rexarm.waypoints_recorded
+        
+        
+        """
         for point in waypoints:
-            print(point)
-            self.rexarm.set_positions(point)
-            self.rexarm.pause(3)
+                    print(point)
+                    self.rexarm.set_positions(point)
+                    self.rexarm.pause(3)
+
         self.rexarm.waypoints_recorded = []
-        self.rexarm.set_torque_limits([0/100.0]*self.rexarm.num_joints,update_now = True)
+        # self.rexarm.set_torque_limits([0/100.0]*self.rexarm.num_joints,update_now = True)
         self.set_next_state("idle")
 
     def record(self):

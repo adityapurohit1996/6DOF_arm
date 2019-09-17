@@ -43,7 +43,7 @@ def FK_dh(joint_angles, link):
         
         T = np.dot(T, Ti)
 
-    print(T)
+    # print(T)
 
     return T
 
