@@ -14,7 +14,7 @@ class TrajectoryPlanner():
         self.num_joints = rexarm.num_joints
         self.initial_wp = [0.0]*self.num_joints
         self.final_wp = [0.0]*self.num_joints 
-        self.dt = 0.01 # command rate
+        self.dt = 0.05 # command rate
     
     def set_initial_wp(self, waypoint):
         self.initial_wp = waypoint
@@ -46,7 +46,10 @@ class TrajectoryPlanner():
         t0 = T[0]
         tf = T[1]
         t = np.linspace(0,tf,(tf-t0)/self.dt)
-        plan = np.array([])
+        
+        plan_q = np.array([])
+        plan_v = np.array([])
+
         M = np.array([[1, t0, t0**2, t0**3],
             [0, 1, 2*t0, 3*t0**2],
             [1, tf, tf**2, tf**3],
@@ -56,20 +59,39 @@ class TrajectoryPlanner():
             b = np.transpose(np.array([self.initial_wp[i],0,self.final_wp[i],0]))
             a = np.dot(np.linalg.inv(M),b)
             
-            qi = np.transpose([a[0]+a[1]*np.power(t,1)+a[2]*np.power(t,2)+a[3]*np.power(t,3)])
+            qi = np.transpose([[a[0] + a[1]*np.power(t,1) + a[2]*np.power(t,2) + a[3]*np.power(t,3)]])
+            vi = np.transpose([[a[1] + a[2]*t + a[3]*np.power(t,2)]])
             if i == 0:
-                plan = qi
+                plan_q = qi
+                plan_v = vi
             else:
-                plan = np.concatenate((plan,qi), axis=1)
+                plan_q = np.concatenate((plan_q, qi), axis = 2)
+                plan_v = np.concatenate((plan_v, vi), axis = 2)
         
+        plan = np.concatenate((plan_q, plan_v), axis = 0)
+
         return plan   
         
 
     def execute_plan(self, plan, look_ahead=8):
-        for i,point in enumerate(plan):
-            if i > len(plan)-look_ahead-1:
-                self.rexarm.set_positions(plan[-1])
+        plan_q = plan[0]
+        plan_v = plan[1]    # velocity in radius/s     row=time_step, col=join#
+
+        # for i in range(len(plan_q)):
+        #     if i > len(plan_q)-look_ahead-1:
+        #         self.rexarm.set_positions(plan_q[-1])
+        #     else:
+        #         self.rexarm.set_positions(plan_q[i+look_ahead])
+            
+        #     self.rexarm.pause(self.dt)
+
+
+        self.rexarm.set_positions(plan_q[-1])
+
+        for i in range(len(plan_v)):
+            if i > len(plan_v)-look_ahead-1:
+                self.rexarm.set_speeds(plan_v[-1])
             else:
-                self.rexarm.set_positions(plan[i+look_ahead])
+                self.rexarm.set_speeds(plan_v[i+look_ahead])
             
             self.rexarm.pause(self.dt)
