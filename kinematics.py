@@ -8,11 +8,12 @@ There are some functions to start with, you may need to implement a few more
 
 """
 
-DH_table = [[0, 0, 74.76, 0],
-            [0, -90, 40.64, -90],
-             [99.58, 0, 0, -90],
-             [0, 90, 0, 90],
-             [0, -90, 69.82+40.64, 0]]
+DH_table = [[0, 74.76+40.64, 0, -90],
+            [-90, 0, 99.58, 0],
+             [90, 0, 0, 90],
+             [0, 110.46, 0, -90],
+             [0, 0, 0, 90]]
+             #[-90, 0, 0, 0]]
 
 
 def FK_dh(joint_angles, link):
@@ -30,10 +31,10 @@ def FK_dh(joint_angles, link):
     T = np.identity(4)
     
     for i, DH in enumerate(DH_table):
-        theta = np.radians(DH[1]) + joint_angles[i]
+        theta = np.radians(DH[0]) + joint_angles[i]
         phi = np.radians(DH[3])
         
-        T1 = np.dot(translate(DH[0], "z"),rotation(theta, "z"))
+        T1 = np.dot(rotation(theta, "z"),translate(DH[1], "z"))
         T2 = np.dot(T1, translate(DH[2], "x"))
         Ti = np.dot(T2, rotation(phi, "x"))
         
