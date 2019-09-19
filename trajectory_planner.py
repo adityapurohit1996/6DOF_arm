@@ -61,7 +61,7 @@ class TrajectoryPlanner():
             a = np.dot(np.linalg.inv(M),b)
             
             qi = np.transpose([a[0] + a[1]*np.power(t,1) + a[2]*np.power(t,2) + a[3]*np.power(t,3)])
-            vi = np.transpose([a[1] + a[2]*t + a[3]*np.power(t,2)])
+            vi = np.transpose([a[1] + 2*a[2]*t + 3*a[3]*np.power(t,2)])
             if i == 0:
                 plan_q = qi
                 plan_v = vi
