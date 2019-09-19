@@ -54,22 +54,24 @@ class TrajectoryPlanner():
             [0, 1, 2*t0, 3*t0**2],
             [1, tf, tf**2, tf**3],
             [0, 1, 2*tf, 3*tf**2]])
-        
-        for i in range(self.num_joints):
+        # print(self.initial_wp)
+        # print(self.final_wp)
+        for iter,i in enumerate(range(self.num_joints)):
             b = np.transpose(np.array([self.initial_wp[i],0,self.final_wp[i],0]))
             a = np.dot(np.linalg.inv(M),b)
             
-            qi = np.transpose([[a[0] + a[1]*np.power(t,1) + a[2]*np.power(t,2) + a[3]*np.power(t,3)]])
-            vi = np.transpose([[a[1] + a[2]*t + a[3]*np.power(t,2)]])
+            qi = np.transpose([a[0] + a[1]*np.power(t,1) + a[2]*np.power(t,2) + a[3]*np.power(t,3)])
+            vi = np.transpose([a[1] + a[2]*t + a[3]*np.power(t,2)])
             if i == 0:
                 plan_q = qi
                 plan_v = vi
             else:
-                plan_q = np.concatenate((plan_q, qi), axis = 2)
-                plan_v = np.concatenate((plan_v, vi), axis = 2)
+                plan_q = np.concatenate((plan_q, qi), axis = 1)
+                plan_v = np.concatenate((plan_v, vi), axis = 1)
         
-        plan = np.concatenate((plan_q, plan_v), axis = 0)
-
+        plan = np.concatenate(([plan_q], [plan_v]), axis = 0)
+        print(plan_v[-2])
+        print(plan_v[-1])
         return plan   
         
 

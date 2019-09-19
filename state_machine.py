@@ -75,7 +75,9 @@ class StateMachine():
         waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
                     [ 1.0, 0.8, 1.0, 0.5, 1.0],
                     [-1.0,-0.8,-1.0,-0.5, -1.0],
-                    [-1.0, 0.8, 1.0, 0.5, 1.0]])
+                    [-1.0, 0.8, 1.0, 0.5, 1.0],
+                    [1.0, -0.8,-1.0,-0.5, -1.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         
         max_speed = 0.4  # in radius/s
 
@@ -85,12 +87,14 @@ class StateMachine():
             self.tp.set_initial_wp(waypoints[i])
             self.tp.set_final_wp(waypoints[i+1])
             T = self.tp.calc_time_from_waypoints(max_speed)
-            
+           # print(T)
             plan = self.tp.generate_cubic_spline(T)
 
             print(plan[0][-1])
 
             self.tp.execute_plan(plan, 10)
+        
+        self.set_next_state("idle")
 
     def execute(self):
         print(self.rexarm.waypoints_recorded)
@@ -103,9 +107,9 @@ class StateMachine():
         waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
                     [ 1.0, 0.8, 1.0, 0.5, 1.0],
                     [-1.0,-0.8,-1.0,-0.5, -1.0],
-                    [-1.0, 0.8, 1.0, 0.5, 1.0]])
-                    # [1.0, -0.8,-1.0,-0.5, -1.0],
-                    # [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+                    [-1.0, 0.8, 1.0, 0.5, 1.0],
+                    [1.0, -0.8,-1.0,-0.5, -1.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         """            
         waypoints = self.rexarm.waypoints_recorded
         
