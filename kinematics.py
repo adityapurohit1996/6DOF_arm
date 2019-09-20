@@ -8,12 +8,13 @@ There are some functions to start with, you may need to implement a few more
 
 """
 
+# DH = [theta, di, ai, alpha]
 DH_table = [[0, 74.76+40.64, 0, -90],
             [-90, 0, 99.58, 0],
              [90, 0, 0, 90],
              [0, 110.46, 0, -90],
              [0, 0, 0, 90]]
-             #[-90, 0, 0, 0]]
+             #[-90, ***, 0, 0]]
 
 
 def FK_dh(joint_angles, link):
@@ -24,6 +25,7 @@ def FK_dh(joint_angles, link):
 
     return a transformation matrix representing the pose of the 
     desired link
+
 
     note: phi is the euler angle about the y-axis in the base frame
 
@@ -81,7 +83,21 @@ def get_euler_angles_from_T(T):
     return the Euler angles from a T matrix
     
     """
-    pass
+    R = T[0:3,0:3]
+
+    # by lecture 3 p20
+    theta = np.arccos(R[2,2]) 
+
+    if theta == 0:
+        phi = np.arctan2(R[1,0],R[0,0])
+        psi = 0
+    else:
+        psi = np.arctan2(R[2,1],-R[2,0])
+        phi = np.arctan2(R[1,2],R[0,2])
+
+
+    return np.array([phi, theta, psi])/np.pi *180
+    # pass
 
 def get_pose_from_T(T):
     """

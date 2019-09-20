@@ -42,13 +42,29 @@ for i in range(len(waypoints) - 1):
         Q = np.concatenate((Q,plan_q), axis=1)
         V = np.concatenate((V,plan_v), axis=1)
 
+    t_last = t_last + t[-1]
+
+inte_q = np.zeros((5,1))
+
+for qi in Q.T:
+    for 
+
+
+
+ax1 = plt.subplot2grid(shape=(2,6), loc=(0,0), colspan=2)
+ax2 = plt.subplot2grid((2,6), (0,2), colspan=2)
+ax3 = plt.subplot2grid((2,6), (0,4), colspan=2)
+ax4 = plt.subplot2grid((2,6), (1,1), colspan=2)
+ax5 = plt.subplot2grid((2,6), (1,3), colspan=2)
+
+axs = [ax1, ax2, ax3, ax4, ax5]
 
 for i, [Qi, Vi] in enumerate(zip(Q, V)):
 
     plt.suptitle(['joint #', i])
-    plt.plot(Time, Qi, 'r--', Time, Vi, 'bs')
-    plt.show()
-
+    axs[i].plot(Time, Qi, 'r--', Time, Vi, 'b')
+    
+plt.show()
 
 # print(plan[0][-1])
 

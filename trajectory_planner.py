@@ -45,6 +45,7 @@ class TrajectoryPlanner():
     def generate_cubic_spline(self, T):
         t0 = T[0]
         tf = T[1]
+        # tf = 3
         t = np.linspace(0,tf,(tf-t0)/self.dt)
         
         plan_q = np.array([])
@@ -70,8 +71,8 @@ class TrajectoryPlanner():
                 plan_v = np.concatenate((plan_v, vi), axis = 1)
         
         plan = np.concatenate(([plan_q], [plan_v]), axis = 0)
-        print(plan_v[-2])
-        print(plan_v[-1])
+        # print(plan_v[-2])
+        # print(plan_v[-1])
         return plan   
         
 
@@ -88,12 +89,16 @@ class TrajectoryPlanner():
         #     self.rexarm.pause(self.dt)
 
 
-        self.rexarm.set_positions(plan_q[-1])
+        # self.rexarm.set_positions(plan_q[-1])
 
         for i in range(len(plan_v)):
             if i > len(plan_v)-look_ahead-1:
-                self.rexarm.set_speeds(plan_v[-1])
+                # self.rexarm.set_speeds(plan_v[-1])
+                self.rexarm.set_positions(plan_q[-1])
             else:
-                self.rexarm.set_speeds(plan_v[i+look_ahead])
+                # self.rexarm.set_speeds(plan_v[i+look_ahead])
+                self.rexarm.set_positions(plan_q[i+look_ahead])
             
+            self.rexarm.set_speeds(plan_v[i])
+
             self.rexarm.pause(self.dt)

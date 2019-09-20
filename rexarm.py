@@ -172,9 +172,10 @@ class Rexarm():
     def get_wrist_pose(self):
         """TODO"""
         T = FK_dh(self.joint_angles_fb, 1)
-        
+
+        R = get_euler_angles_from_T(T)
         D = np.dot(T,np.transpose([10, 0, 0, 1]))
 
         # print(D)
 
-        return [D[0],D[1],D[2],0,0,0]
+        return [D[0],D[1],D[2],R[0], R[1], R[2]]

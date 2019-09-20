@@ -79,7 +79,7 @@ class StateMachine():
                     [1.0, -0.8,-1.0,-0.5, -1.0],
                     [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         
-        max_speed = 0.4  # in radius/s
+        max_speed = 1  # in radius/s
 
         # self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
 
@@ -90,7 +90,7 @@ class StateMachine():
            # print(T)
             plan = self.tp.generate_cubic_spline(T)
 
-            print(plan[0][-1])
+            # print(plan[0][-1])
 
             self.tp.execute_plan(plan, 10)
         
