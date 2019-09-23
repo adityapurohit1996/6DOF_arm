@@ -1,17 +1,11 @@
 import numpy as np 
 import time
 
-"""
-TODO: build a trajectory generator and waypoint planner 
-        so it allows your state machine to iterate through
-        the plan at the desired command update rate
-"""
-
 class TrajectoryPlanner():
-    def __init__(self, rexarm):
+    def __init__(self):
         self.idle = True
-        self.rexarm = rexarm
-        self.num_joints = rexarm.num_joints
+        # self.rexarm = rexarm
+        self.num_joints = 5
         self.initial_wp = [0.0]*self.num_joints
         self.final_wp = [0.0]*self.num_joints 
         self.dt = 0.05 # command rate
@@ -24,15 +18,15 @@ class TrajectoryPlanner():
         self.final_wp = waypoint
         
 
-    def go(self, max_speed = 0.2):
-        # not sure?
-        self.rexarm.set_speeds_normalized_global(max_speed,update_now=True)
+    # def go(self, max_speed = 0.2):
+    #     # not sure?
+    #     # self.rexarm.set_speeds_normalized_global(max_speed,update_now=True)
 
 
-    def stop(self):
-        # not sure?
-        self.rexarm.disable_torque()
-        self.rexarm.get_feedback()
+    # def stop(self):
+    #     # not sure?
+    #     self.rexarm.disable_torque()
+    #     self.rexarm.get_feedback()
         
 
     def calc_time_from_waypoints(self, max_speed = 0.4):
@@ -45,7 +39,6 @@ class TrajectoryPlanner():
     def generate_cubic_spline(self, T):
         t0 = T[0]
         tf = T[1]
-        # tf = 3
         t = np.linspace(0,tf,(tf-t0)/self.dt)
         
         plan_q = np.array([])
@@ -57,7 +50,7 @@ class TrajectoryPlanner():
             [0, 1, 2*tf, 3*tf**2]])
         # print(self.initial_wp)
         # print(self.final_wp)
-        for iter,i in enumerate(range(self.num_joints)):
+        for i in range(self.num_joints):
             b = np.transpose(np.array([self.initial_wp[i],0,self.final_wp[i],0]))
             a = np.dot(np.linalg.inv(M),b)
             
@@ -73,32 +66,28 @@ class TrajectoryPlanner():
         plan = np.concatenate(([plan_q], [plan_v]), axis = 0)
         # print(plan_v[-2])
         # print(plan_v[-1])
-        return plan   
+        return t, plan   
         
 
-    def execute_plan(self, plan, look_ahead=8):
-        plan_q = plan[0]
-        plan_v = plan[1]    # velocity in radius/s     row=time_step, col=join#
+    # def execute_plan(self, plan, look_ahead=8):
+    #     plan_q = plan[0]
+    #     plan_v = plan[1]    # velocity in radius/s     row=time_step, col=join#
 
-        # for i in range(len(plan_q)):
-        #     if i > len(plan_q)-look_ahead-1:
-        #         self.rexarm.set_positions(plan_q[-1])
-        #     else:
-        #         self.rexarm.set_positions(plan_q[i+look_ahead])
+    #     # for i in range(len(plan_q)):
+    #     #     if i > len(plan_q)-look_ahead-1:
+    #     #         self.rexarm.set_positions(plan_q[-1])
+    #     #     else:
+    #     #         self.rexarm.set_positions(plan_q[i+look_ahead])
             
-        #     self.rexarm.pause(self.dt)
+    #     #     self.rexarm.pause(self.dt)
 
 
-        # self.rexarm.set_positions(plan_q[-1])
+    #     self.rexarm.set_positions(plan_q[-1])
 
-        for i in range(len(plan_v)):
-            if i > len(plan_v)-look_ahead-1:
-                # self.rexarm.set_speeds(plan_v[-1])
-                self.rexarm.set_positions(plan_q[-1])
-            else:
-                # self.rexarm.set_speeds(plan_v[i+look_ahead])
-                self.rexarm.set_positions(plan_q[i+look_ahead])
+    #     for i in range(len(plan_v)):
+    #         if i > len(plan_v)-look_ahead-1:
+    #             self.rexarm.set_speeds(plan_v[-1])
+    #         else:
+    #             self.rexarm.set_speeds(plan_v[i+look_ahead])
             
-            self.rexarm.set_speeds(plan_v[i])
-
-            self.rexarm.pause(self.dt)
+    #         self.rexarm.pause(self.dt)
