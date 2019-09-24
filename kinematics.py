@@ -86,15 +86,19 @@ def get_euler_angles_from_T(T):
     R = T[0:3,0:3]
 
     # by lecture 3 p20
-    theta = np.arccos(R[2,2]) 
-
-    if theta == 0:
-        phi = np.arctan2(R[1,0],R[0,0])
+    r33 = R[2,2]
+    
+    if(r33 == 1 or r33 == -1):
+        theta = 0
+        phi = np.arctan2(R[1,0], R[0,0])
         psi = 0
     else:
+        # ***** Need to choose positive or negative
+        theta = np.arctan2(np.sqrt(1-r33**2), r33)
+        # theta = np.arctan2(-np.sqrt(1-r33^2), r33)
+
         psi = np.arctan2(R[2,1],-R[2,0])
         phi = np.arctan2(R[1,2],R[0,2])
-
 
     return np.array([phi, theta, psi])/np.pi *180
     # pass
