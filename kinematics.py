@@ -57,7 +57,7 @@ def FK_pox(joint_angles):
     """
     pass
 
-def IK(pose):
+def IK(pose, DH_table):
     """
     TODO: implement this function
 
@@ -66,19 +66,66 @@ def IK(pose):
     return the required joint angles
 
     """
+    joint_angles = np.zeros((6,1))
 
+    # 0. DH Parameters
+    d1 = DH_table[0,1]
+    d4 = DH_table[3,1]
+    # d6 = DH_table[5,1]
+    d6 = 110
+
+    a2 = DH_table[1,2]
+
+    # 1. Find O0w(wrist position in world frame)  
+    O0t = pose[3, 0:3]
+    R0t = pose[0:3, 0:3]
+
+    O0w = O0t - R0t*np.array([0, 0, d6]).T
     
+    # 2. Find theta1, theta2, theta3
+    # theta1 will have 2 set
+    # theta2, theta3 will have 2 set
 
+    X0w = O0w[0]
+    Y0w = O0w[1]
+    Z0w = O0w[2]
+    
+    theta1 = np.arctan2(Y0w, X0w)  
 
+    Zd = Z0w - d1
+    r = Y0w/np.sin(theta1)
 
+    theta3 = np.arccos((Zd**2+r**2-a2**2-d4**2) / 2*a2*d4)
+    theta2 = -pi/2 - np.arctan2(Zd,r) + np.arctan2(d4*sin(theta3), a2 + d4*cos(theta3))
 
+    # 3. Find R0w 
+    joint_angles[0] = theta1
+    joint_angles[1] = theta2
+    joint_angles[2] = theta3
 
+    T04 = np.identity(4)
 
+    for i in range(3):
+        DH = DH_table[i]
 
+        theta = np.radians(DH[0]) + joint_angles[i]
+        phi = np.radians(DH[3])
+        
+        Ti = T_frrom_DH(theta, DH[1], DH[2], phi)
+        
+        T04 = np.dot(T04, Ti)
 
+    R0w = T04[0:3,0:3]
 
+    # 4. Find theta4, theta5, theta6
+    Rwt = np.dot(R0w^-1, R0t)
+    
+    Twt = np.identity(4)
+    Twt[0:3,0:3] = Rwt
 
-    pass
+    [joint_angles[3], joint_angles[4], joint_angles[5]] = get_euler_angles_from_T(Twt)
+
+    return joint_angles
 
 
 def get_euler_angles_from_T(T):
