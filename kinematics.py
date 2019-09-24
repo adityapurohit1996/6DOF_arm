@@ -8,16 +8,8 @@ There are some functions to start with, you may need to implement a few more
 
 """
 
-# DH = [theta, di, ai, alpha]
-DH_table = [[0, 74.76+40.64, 0, -90],
-            [-90, 0, 99.58, 0],
-             [90, 0, 0, 90],
-             [0, 110.46, 0, -90],
-             [0, 0, 0, 90]]
-             #[-90, ***, 0, 0]]
 
-
-def FK_dh(joint_angles, link):
+def FK_dh(joint_angles, DH_table):
     """
     TODO: implement this function
 
@@ -36,19 +28,19 @@ def FK_dh(joint_angles, link):
         theta = np.radians(DH[0]) + joint_angles[i]
         phi = np.radians(DH[3])
         
-        T1 = np.dot(rotation(theta, "z"),translate(DH[1], "z"))
-        T2 = np.dot(T1, translate(DH[2], "x"))
-        Ti = np.dot(T2, rotation(phi, "x"))
-        
-        # print(Ti)
-
-        # print(Ti)
-        
+        Ti = T_frrom_DH(theta, DH[1], DH[2], phi)
+     
         T = np.dot(T, Ti)
-
     # print(T)
-
     return T
+
+def T_frrom_DH(theta, d, a, phi):
+    T1 = np.dot(rotation(theta, "z"),translate(d, "z"))
+    T2 = np.dot(T1, translate(a, "x"))
+    Ti = np.dot(T2, rotation(phi, "x"))
+
+    return Ti
+
 
 def FK_pox(joint_angles):
     """
@@ -74,6 +66,18 @@ def IK(pose):
     return the required joint angles
 
     """
+
+    
+
+
+
+
+
+
+
+
+
+
     pass
 
 

@@ -47,6 +47,14 @@ class Rexarm():
         self.temp_fb = [0.0] * self.num_joints         # Celsius
         self.move_fb = [0] *  self.num_joints
 
+        # DH = [theta, di, ai, alpha]
+        self.DH_table = [[0, 74.76+40.64, 0, -90],
+                        [-90, 0, 99.58, 0],
+                        [90, 0, 0, 90],
+                        [0, 110.46, 0, -90],
+                        [0, 0, 0, 90]]
+                        #[-90, ***, 0, 0]]
+
     def initialize(self):
         for joint in self.joints:
             joint.enable_torque()
@@ -171,7 +179,7 @@ class Rexarm():
 
     def get_wrist_pose(self):
         """TODO"""
-        T = FK_dh(self.joint_angles_fb, 1)
+        T = FK_dh(self.joint_angles_fb, self.DH_table)
 
         R = get_euler_angles_from_T(T)
         D = np.dot(T,np.transpose([10, 0, 0, 1]))
