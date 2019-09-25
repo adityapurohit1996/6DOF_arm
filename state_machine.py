@@ -150,33 +150,25 @@ class StateMachine():
    
         print(self.kinect.rgb_click_points)
         print(self.kinect.depth_click_points)
-
-        """TODO Perform camera calibration here"""
-        A =np.array([])
-        matrix_affine = np.array([])
-        ma_vect =[]
-        print(self.kinect.rgb_click_points[0])
-        for i, rgb in enumerate(self.kinect.rgb_click_points) :
-            a = np.array([[rgb[0],rgb[1],1,0,0,0],[0,0,0,rgb[0],rgb[1],1]])
-            if(i==0) :
-                A =a
-            else :
-                A = np.concatenate((A,a),axis = 0)
-      #  print(A)
         b = np.transpose([0,0,0,606.4,606.4,606.4,606.4,0,179.38,174])
-      #  print(np.shape(A))
-       # print(np.shape(b))
-        ma_vect = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(A),A)),np.transpose(A)),b)
-        print(ma_vect)
-        matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]],[0,0,1]]
-        #print(matrix_affine)
-        print("rgb")
-        print(self.kinect.rgb_click_points[0])
-        z = np.array([1])
-        print(np.dot(matrix_affine,np.transpose(np.concatenate((self.kinect.rgb_click_points[0],[1]),axis = None))))
-        print(np.dot(matrix_affine,np.transpose(np.concatenate((self.kinect.rgb_click_points[1],[1]),axis = None))))
-        print(np.dot(matrix_affine,np.transpose(np.concatenate((self.kinect.rgb_click_points[2],[1]),axis = None))))
-        print(np.dot(matrix_affine,np.transpose(np.concatenate((self.kinect.rgb_click_points[3],[1]),axis = None))))
-        print(np.dot(matrix_affine,np.transpose(np.concatenate((self.kinect.rgb_click_points[4],[1]),axis = None))))
+        Camera_coord =np.array([])
+        intrinsic_matrix = [[ 528.17413472 ,   0   ,       312.10510152],
+                            [   0      ,    528.04886194,  286.03701925],
+                            [   0 ,           0     ,       1        ]]
+        affine_depth = self.kinect.getAffineTransform(self.kinect.rgb_click_points,self.kinect.depth_click_points)
+        for i,rgb in enumerate (self.kinect.rgb_click_points) :
+            a = np.array([rgb[0],rgb[1],1])
+            a = np.transpose(a)
+            Zc = 914.4
+            camera =Zc* np.dot( np.linalg.inv(intrinsic_matrix),a) 
+            print(camera)
+            if i == 0:
+                Camera_coord = camera
+            else :
+                Camera_coord = np.concatenate (Camera_coord,camera)
+        
+
+
+        extrinsic_affine = self.kinect.getAffineTransform(Camera_coord,b)
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)

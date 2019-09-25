@@ -108,10 +108,22 @@ class Kinect():
         TODO: Rewrite this function to take in an arbitrary number of coordinates and 
         find the transform without using cv2 functions
         """
-        pts1 = coord1[0:3].astype(np.float32)
-        pts2 = coord2[0:3].astype(np.float32)
-        print(cv2.getAffineTransform(pts1,pts2))
-        return cv2.getAffineTransform(pts1,pts2)
+        A =np.array([])
+        matrix_affine = np.array([])
+        ma_vect =[]
+        #print(self.kinect.rgb_click_points[0])
+        for i, rgb in enumerate(coord1) :
+            a = np.array([[rgb[0],rgb[1],1,0,0,0],[0,0,0,rgb[0],rgb[1],1]])
+            if(i==0) :
+                A =a
+            else :
+                A = np.concatenate((A,a),axis = 0)
+        coord2 = coord2.flatten()
+        ma_vect = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(A),A)),np.transpose(A)),coord2)
+        #print(ma_vect)
+        matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]],[0,0,1]]
+        return matrix_affine
+        
 
 
     def registerDepthFrame(self, frame):
