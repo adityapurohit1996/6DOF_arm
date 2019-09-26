@@ -13,7 +13,7 @@ class Kinect():
             self.kinectConnected = True
         
         # mouse clicks & calibration variables
-        self.depth2rgb_affine = np.float32([[1,0,0],[0,1,0]])
+        self.depth2rgb_affine = np.float32([[1,0,0],[0,1,0],[0,0,1]])
         self.kinectCalibrated = False
         self.last_click = np.array([0,0])
         self.new_click = False
@@ -47,7 +47,7 @@ class Kinect():
         Capture depth frame from Kinect, format is 16bit Grey, 10bit resolution.
         """
         if(self.kinectConnected):
-            if(self.kinectCalibrated):
+            if(self.kinectCalibrated and False):
                 self.currentDepthFrame = self.registerDepthFrame(freenect.sync_get_depth()[0])
             else:
                 self.currentDepthFrame = freenect.sync_get_depth()[0]
@@ -131,6 +131,8 @@ class Kinect():
         TODO:
         Using an Affine transformation, transform the depth frame to match the RGB frame
         """
+        #rgb_frame = np.dot(self.depth2rgb_affine,frame)
+        #return rgb_frame
         pass
 
     def loadCameraCalibration(self):
@@ -138,6 +140,9 @@ class Kinect():
         TODO:
         Load camera intrinsic matrix from file.
         """
+        affine = np.loadtxt("calibration.cfg",dtype=float,delimiter=',')
+       # print(affine)
+        return affine
         pass
     
     def blockDetector(self):

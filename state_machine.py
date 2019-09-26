@@ -14,6 +14,7 @@ class StateMachine():
         self.status_message = "State: Idle"
         self.current_state = "idle"
         self.next_state = "idle"
+        self.projection = np.identity(3)
 
 
     def set_next_state(self, state):
@@ -148,27 +149,41 @@ class StateMachine():
                     i = i + 1
                     self.kinect.new_click = False
    
-        print(self.kinect.rgb_click_points)
-        print(self.kinect.depth_click_points)
-        b = np.transpose([0,0,0,606.4,606.4,606.4,606.4,0,179.38,174])
+        #print(self.kinect.rgb_click_points)
+        #print(self.kinect.depth_click_points)
+        b = np.transpose([0,0,606.4,0,606.4,606.4,0,606.4,179.38,174])
         Camera_coord =np.array([])
-        intrinsic_matrix = [[ 528.17413472 ,   0   ,       312.10510152],
-                            [   0      ,    528.04886194,  286.03701925],
+        #intrinsic_matrix = self.kinect.loadCameraCalibration()
+        intrinsic_matrix = [[ 526.17413472 ,   0   ,       325.10510152],
+                            [   0      ,    526.04886194,  276.03701925],
                             [   0 ,           0     ,       1        ]]
-        affine_depth = self.kinect.getAffineTransform(self.kinect.rgb_click_points,self.kinect.depth_click_points)
+        inv_intrinsic_matrix = np.linalg.inv(intrinsic_matrix)
+        print(inv_intrinsic_matrix)
+        self.depth2rgb_affine = self.kinect.getAffineTransform(self.kinect.depth_click_points,self.kinect.rgb_click_points)
         for i,rgb in enumerate (self.kinect.rgb_click_points) :
             a = np.array([rgb[0],rgb[1],1])
             a = np.transpose(a)
-            Zc = 914.4
-            camera =Zc* np.dot( np.linalg.inv(intrinsic_matrix),a) 
-            print(camera)
+            Zc = -914.4
+            coord =Zc* np.dot(inv_intrinsic_matrix ,a) 
+            #coord = a
+            coord =[coord]
+            #print(coord)
             if i == 0:
-                Camera_coord = camera
+                Camera_coord = coord
             else :
-                Camera_coord = np.concatenate (Camera_coord,camera)
-        
+                Camera_coord = np.concatenate ((Camera_coord,coord),axis = 0)
+        print("camera_coord")
+        print(Camera_coord)
 
 
         extrinsic_affine = self.kinect.getAffineTransform(Camera_coord,b)
+        print("extrinsic affine")
+        print(extrinsic_affine)
+        self.projection = Zc*np.dot(inv_intrinsic_matrix,extrinsic_affine)
+        #self.projection = extrinsic_affine
+       
+        print("projection")
+        print(self.projection)
+        self.kinect.kinectCalibrated = True
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)
