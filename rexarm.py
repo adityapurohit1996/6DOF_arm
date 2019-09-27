@@ -53,7 +53,7 @@ class Rexarm():
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
                         [0, 0, 0, 90]]
-                        #[-90, ***, 0, 0]]
+                        # [-90, ***, 0, 0]]
 
     def initialize(self):
         for joint in self.joints:
@@ -181,7 +181,7 @@ class Rexarm():
         """TODO"""
         T = FK_dh(self.joint_angles_fb, self.DH_table)
 
-        R = get_euler_angles_from_T(T)
+        R = get_euler_angles_from_T(T)/np.pi*180
         D = np.dot(T,np.transpose([10, 0, 0, 1]))
 
         # print(D)
