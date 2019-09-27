@@ -139,6 +139,12 @@ class Gui(QMainWindow):
         self.ui.btnUser4.setText("TP test")
         self.ui.btnUser4.clicked.connect(partial(self.sm.set_next_state, "TP test"))
 
+        self.ui.btnUser11.setText("IK_set_pose")
+        self.ui.btnUser11.clicked.connect(partial(self.sm.set_next_state, "IK_set_pose"))
+        self.ui.btnUser12.setText("IK_Test")
+        self.ui.btnUser12.clicked.connect(partial(self.sm.set_next_state, "IK_test"))
+
+
         """initalize manual control off"""
         self.ui.SliderFrame.setEnabled(False)
 

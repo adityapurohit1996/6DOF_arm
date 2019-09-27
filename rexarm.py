@@ -48,11 +48,11 @@ class Rexarm():
         self.move_fb = [0] *  self.num_joints
 
         # DH = [theta, di, ai, alpha]
-        self.DH_table = [[0, 74.76+40.64, 0, -90],
+        self.DH_table = np.array([[0, 74.76+40.64, 0, -90],
                         [-90, 0, 99.58, 0],
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
-                        [0, 0, 0, 90]]
+                        [0, 0, 0, 90]])
                         # [-90, ***, 0, 0]]
 
     def initialize(self):
@@ -86,6 +86,13 @@ class Rexarm():
             self.position[i] = joint_angles[i]
             if(update_now):
                 joint.set_position(joint_angles[i])
+
+    def set_pose(self, pose, update_now = True):
+        joint_angles = IK(pose, self.DH_table)
+        print("Joint angles from IK: ", joint_angles)
+        # self.set_positions(joint_angles, update_now)
+
+        self.set_positions(joint_angles[0:5], update_now)
     
     def set_speeds_normalized_global(self, speed, update_now = True):
         for i,joint in enumerate(self.joints):
