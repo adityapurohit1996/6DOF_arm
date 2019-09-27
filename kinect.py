@@ -47,7 +47,7 @@ class Kinect():
         Capture depth frame from Kinect, format is 16bit Grey, 10bit resolution.
         """
         if(self.kinectConnected):
-            if(self.kinectCalibrated and False):
+            if(self.kinectCalibrated):
                 self.currentDepthFrame = self.registerDepthFrame(freenect.sync_get_depth()[0])
             else:
                 self.currentDepthFrame = freenect.sync_get_depth()[0]
@@ -123,17 +123,46 @@ class Kinect():
         #print(ma_vect)
         matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]],[0,0,1]]
         return matrix_affine
-        
 
+    def getAffineTransform3(self, coord1, coord2):
+        """
+        Given 2 sets of corresponding coordinates, 
+        find the affine matrix transform between them.
+
+        TODO: Rewrite this function to take in an arbitrary number of coordinates and 
+        find the transform without using cv2 functions
+        """
+        A =np.array([])
+        matrix_affine = np.array([])
+        ma_vect =[]
+        #print(self.kinect.rgb_click_points[0])
+        for i, rgb in enumerate(coord1) :
+            a = np.array([[rgb[0],rgb[1],rgb[2],0,0,0,0,0,0],[0,0,0,rgb[0],rgb[1],rgb[2],0,0,0],[0,0,0,0,0,0,rgb[0],rgb[1],rgb[2]]])
+            if(i==0) :
+                A =a
+            else :
+                A = np.concatenate((A,a),axis = 0)
+        coord2 = coord2.flatten()
+        ma_vect = np.dot(np.linalg.pinv(A),coord2)
+        #print(ma_vect)
+        matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]],[ma_vect[6],ma_vect[7],ma_vect[8]]]
+        return matrix_affine
+        
 
     def registerDepthFrame(self, frame):
         """
         TODO:
         Using an Affine transformation, transform the depth frame to match the RGB frame
         """
+        #print(self.depth2rgb_affine)
+        frame2 = np.empty([np.size(frame,0),np.size(frame,1)])
+        cv2.warpPerspective(frame,np.asarray(self.depth2rgb_affine),(np.size(frame,0),np.size(frame,1)),frame2)
+        print(frame2[23][24])
+        return frame2
+       
         #rgb_frame = np.dot(self.depth2rgb_affine,frame)
         #return rgb_frame
-        pass
+        
 
     def loadCameraCalibration(self):
         """
