@@ -114,13 +114,18 @@ class StateMachine():
         self.status_message = "State: TP_test - testing trajectory planner"
         self.current_state = "TP_test"
 
-        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
-                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
-                    [-1.0,-0.8,-1.0,-0.5, -1.0],
-                    [-1.0, 0.8, 1.0, 0.5, 1.0],
-                    [1.0, -0.8,-1.0,-0.5, -1.0],
-                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        # waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+        #             [ 1.0, 0.8, 1.0, 0.5, 1.0],
+        #             [-1.0,-0.8,-1.0,-0.5, -1.0],
+        #             [-1.0, 0.8, 1.0, 0.5, 1.0],
+        #             [1.0, -0.8,-1.0,-0.5, -1.0],
+        #             [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         
+        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 0.0, 0.0, 0.0],
+                    [ -1.0, 0.8, 0.0, 0.0, 0.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+
         max_speed = 1  # in radius/s
 
         # self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
@@ -136,7 +141,7 @@ class StateMachine():
 
             self.tp.execute_plan(plan, 10)
         
-        self.rexarm.set_speeds_normalized_global()
+        self.rexarm.set_speeds_normalized_global(0.25)
         self.set_next_state("idle")
 
     def execute(self):
