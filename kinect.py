@@ -135,7 +135,8 @@ class Kinect():
         You will need to locate
         blocks in 3D space
         """
-        pass
+
+        
 
     def detectBlocksInDepthImage(self):
         """
@@ -143,4 +144,23 @@ class Kinect():
         Implement a blob detector to find blocks
         in the depth image
         """
-        pass
+        I_depth = self.currentDepthFrame
+        RGB_depth = self.currentVideoFrame
+
+        # cv2.threshold(I_depth, )
+        print I_depth
+        cv2.imshow('Depth', I_depth)
+        cv2.waitKey()
+
+
+def test():
+    kinect = Kinect()
+    kinect.loadDepthFrame()
+    kinect.loadVideoFrame()
+
+    kinect.detectBlocksInDepthImage()
+
+
+
+if __name__ == '__main__':
+    test()
