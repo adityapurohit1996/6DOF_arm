@@ -13,12 +13,13 @@ class Kinect():
             self.kinectConnected = True
         
         # mouse clicks & calibration variables
-        self.depth2rgb_affine = np.float32([[1,0,0],[0,1,0]])
+        self.depth2rgb_affine = np.float32([[1,0,0],[0,1,0],[0,0,1]])
         self.kinectCalibrated = False
         self.last_click = np.array([0,0])
         self.new_click = False
         self.rgb_click_points = np.zeros((5,2),int)
         self.depth_click_points = np.zeros((5,2),int)
+        self.world_frame = np.zeros(3)
 
         """ Extra arrays for colormaping the depth image"""
         self.DepthHSV = np.zeros((480,640,3)).astype(np.uint8)
@@ -108,24 +109,70 @@ class Kinect():
         TODO: Rewrite this function to take in an arbitrary number of coordinates and 
         find the transform without using cv2 functions
         """
-        pts1 = coord1[0:3].astype(np.float32)
-        pts2 = coord2[0:3].astype(np.float32)
-        print(cv2.getAffineTransform(pts1,pts2))
-        return cv2.getAffineTransform(pts1,pts2)
+        A =np.array([])
+        matrix_affine = np.array([])
+        ma_vect =[]
+        #print(self.kinect.rgb_click_points[0])
+        for i, rgb in enumerate(coord1) :
+            a = np.array([[rgb[0],rgb[1],1,0,0,0],[0,0,0,rgb[0],rgb[1],1]])
+            if(i==0) :
+                A =a
+            else :
+                A = np.concatenate((A,a),axis = 0)
+        coord2 = coord2.flatten()
+        ma_vect = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(A),A)),np.transpose(A)),coord2)
+        #print(ma_vect)
+        matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]]]
+        return matrix_affine
 
+    def getAffineTransform3(self, coord1, coord2):
+        """
+        Given 2 sets of corresponding coordinates, 
+        find the affine matrix transform between them.
+
+        TODO: Rewrite this function to take in an arbitrary number of coordinates and 
+        find the transform without using cv2 functions
+        """
+        A =np.array([])
+        matrix_affine = np.array([])
+        ma_vect =[]
+        #print(self.kinect.rgb_click_points[0])
+        for i, rgb in enumerate(coord1) :
+            a = np.array([[rgb[0],rgb[1],rgb[2],0,0,0,0,0,0],[0,0,0,rgb[0],rgb[1],rgb[2],0,0,0],[0,0,0,0,0,0,rgb[0],rgb[1],rgb[2]]])
+            if(i==0) :
+                A =a
+            else :
+                A = np.concatenate((A,a),axis = 0)
+        coord2 = coord2.flatten()
+        ma_vect = np.dot(np.linalg.pinv(A),coord2)
+        #print(ma_vect)
+        matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]],[ma_vect[6],ma_vect[7],ma_vect[8]]]
+        return matrix_affine
+        
 
     def registerDepthFrame(self, frame):
         """
         TODO:
         Using an Affine transformation, transform the depth frame to match the RGB frame
         """
-        pass
+        
+        #self.depth2rgb_affine =cv2.getPerspectiveTransform(self.depth_click_points,self.rgb_click_points)
+        
+        self.depth2rgb_affine = np.array(self.depth2rgb_affine)
+        return cv2.warpAffine(frame,self.depth2rgb_affine,(640,480))
+       
+        #rgb_frame = np.dot(self.depth2rgb_affine,frame)
+        #return rgb_frame
+        
 
     def loadCameraCalibration(self):
         """
         TODO:
         Load camera intrinsic matrix from file.
         """
+        affine = np.loadtxt("calibration.cfg",dtype=float,delimiter=',')
+       # print(affine)
+        return affine
         pass
     
     def blockDetector(self):
