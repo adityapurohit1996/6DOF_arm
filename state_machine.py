@@ -1,6 +1,7 @@
 import time
 import cv2
 import numpy as np
+from kinematics import *
 
 waypoints_recorded = []
 """
@@ -17,6 +18,7 @@ class StateMachine():
         self.next_state = "idle"
         self.projection = np.identity(3)
 
+        self.IK_target = self.rexarm.get_positions
 
     def set_next_state(self, state):
         self.next_state = state
@@ -47,6 +49,15 @@ class StateMachine():
                 self.record()
             if(self.next_state == "playback"):
                 self.playback()
+            if(self.next_state == "TP test"):
+                self.TP_test()
+            if(self.next_state == "IK_set_pose"):
+                self.IK_set_pose()
+            if(self.next_state == "IK_test"):
+                self.IK_test()
+            if(self.next_state == "Grab_Place"):
+                self.Grab_Place()
+
                 
         if(self.current_state == "estop"):
             self.next_state = "estop"
@@ -57,40 +68,158 @@ class StateMachine():
                 self.idle()
         
         if(self.current_state == "execute"):
-            self.idle()
+            if(self.next_state == "idle"):
+                self.idle()
 
+        if(self.current_state == "record"):
+            if(self.next_state == "idle"):
+                self.idle()  
         if(self.current_state == "playback"):
             if(self.next_state == "idle"):
                 self.idle()   
+
+        if(self.current_state == "TP test"):
+            if(self.next_state == "idle"):
+                self.idle()
+        
+        if(self.current_state == "IK_set_pose"):
+            if(self.next_state == "idle"):
+                self.idle()
+        if(self.current_state == "IK_test"):
+            if(self.next_state == "idle"):
+                self.idle()
+        if(self.current_state == "Grab_Place"):
+            if(self.next_state == "idle"):
+                self.idle()
                 
                
 
     """Functions run for each state"""
-    def execute(self):
-        print(self.rexarm.waypoints_recorded)
-        #wtr = csv.writer(open ('C.csv', 'w'), delimiter=',', lineterminator='\n')
-        #for x in self.rexarm.waypoints_recorded
-        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
-        self.status_message = "State: execute - task 1.2"
-        self.current_state = "execute"
-        """
+    def Grab_Place(self):
+        print(self.kinect.cube_click_points)
+        self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
+        self.current_state = "Grab_Place"
+        '''
+        i = 0
+        for j in range(2):
+            self.status_message = "Click the current location of cube and location the cube should be placed"
+            while (i <= j):
+                self.rexarm.get_feedback()
+                if(self.kinect.new_click == True):
+                    self.kinect.cube_click_points[i] = self.kinect.last_click.copy()
+                    i = i + 1
+                    self.kinect.new_click = False        
+        i = 0
+        '''
+        coordinates_global = np.array([3,180, 120, 1],)
+        orientation_gripper = np.array([[0, 0, 0],
+                             [0, 0, 0],
+                             [0, 0, 0]])
+        pose = np.zeros((4,4))
+        print(pose)
+        pose[0:3,0:3]=orientation_gripper;
+        pose[:,3] = np.transpose(coordinates_global)
+        print(pose)
+        #IK_pose_wrist = FK_dh(self.joint_angles_wrist, self.rexarm.DH_table)
+        test = np.array([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        print(test)
+        print(test[0:3,0:3])
+        '''
+        joint_angles_IK = IK(coordinates_global,self.rexarm.DH_table)
+        self.rexarm.set_pose(joint_angles_IK)
+        self.rexarm.pause(3)
+
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+        '''
+
+
+    def IK_set_pose(self):
+        self.status_message = "State: IK_set_pose - setting pose for IK test"
+        self.current_state = "IK_set_pose"
+
+        self.IK_target = list(self.rexarm.get_positions())
+        print("Setting target: ", self.IK_target)
+        self.set_next_state("idle")
+
+    def IK_test(self):
+        self.status_message = "State: IK_test - Going to desinated pose"
+        self.current_state = "IK_test"
+
+        print("IK_target: ", self.IK_target)
+        IK_pose = FK_dh(self.IK_target, self.rexarm.DH_table)
+        print("IK_Pose: ", IK_pose)
+
+        self.rexarm.set_pose(IK_pose)
+        self.rexarm.pause(3)
+
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+
+
+    def TP_test(self):    
+        self.status_message = "State: TP_test - testing trajectory planner"
+        self.current_state = "TP_test"
+
         waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
                     [ 1.0, 0.8, 1.0, 0.5, 1.0],
                     [-1.0,-0.8,-1.0,-0.5, -1.0],
                     [-1.0, 0.8, 1.0, 0.5, 1.0],
                     [1.0, -0.8,-1.0,-0.5, -1.0],
-                    [playback 0.0, 0.0, 0.0, 0.0, 0.0]])
-        """
-        waypoints = self.rexarm.waypoints_recorded
-        for point in waypoints:
-            print(point)
-            self.rexarm.set_positions(point)
-            self.rexarm.pause(3)
-        self.rexarm.waypoints_recorded = []
-        self.rexarm.set_torque_limits([0/100.0]*self.rexarm.num_joints,update_now = True)
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        
+        max_speed = 1  # in radius/s
+
+        # self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
+
+        for i in range(len(waypoints) - 1):
+            self.tp.set_initial_wp(waypoints[i])
+            self.tp.set_final_wp(waypoints[i+1])
+            T = self.tp.calc_time_from_waypoints(max_speed)
+           # print(T)
+            plan = self.tp.generate_cubic_spline(T)
+
+            # print(plan[0][-1])
+
+            self.tp.execute_plan(plan, 10)
+        
+        self.rexarm.set_speeds_normalized_global()
         self.set_next_state("idle")
 
+    def execute(self):
+        self.status_message = "State: execute - executing predifined waypoints with trivial set_positions"
+        self.current_state = "execute"
+        
+        print(self.rexarm.waypoints_recorded)
+        #wtr = csv.writer(open ('C.csv', 'w'), delimiter=',', lineterset_next_stateminator='\n')
+        #for x in self.rexarm.waypoints_recorded
+        self.rexarm.set_speeds_normalized_global(0.2,update_now=True)
+        self.status_message = "State: execute - task 1.2"
+        self.current_state = "execute"
+       
+        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
+                    [-1.0,-0.8,-1.0,-0.5, -1.0],
+                    [-1.0, 0.8, 1.0, 0.5, 1.0],
+                    [1.0, -0.8,-1.0,-0.5, -1.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        """            
+        waypoints = self.rexarm.waypoints_recorded
+        """
+        for point in waypoints:
+                    print(point)
+                    self.rexarm.set_positions(point)
+                    self.rexarm.pause(3)
+
+        # self.rexarm.waypoints_recorded = []
+        # self.rexarm.set_torque_limits([0/100.0]*self.rexarm.num_joints,update_now = True)
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+
     def record(self):
+        self.status_message = "State: record - recording position"
+        self.current_state = "record"
+
         print("Made it")
         print(self.rexarm.get_positions())
         self.rexarm.waypoints_recorded.append(list(self.rexarm.get_positions()))
@@ -99,6 +228,8 @@ class StateMachine():
         self.set_next_state("idle")
     
     def playback(self):
+        self.status_message = "State: playback - playing recroded waypoints"
+        self.current_state = "playback"
         self.rexarm.set_torque_limits([40/100.0]*self.rexarm.num_joints,update_now = True)
         self.execute()
         self.set_next_state("idle")
