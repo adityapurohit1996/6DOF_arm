@@ -32,7 +32,9 @@ class Rexarm():
                             [-25-90+safety_margim, 208-90-safety_margim],
                             [-110+safety_margim, 100-safety_margim],
                             [-180+safety_margim, 179.99-safety_margim],
-                            [-125+safety_margim, 120-safety_margim],], dtype=np.float)*D2R
+                            [-125+safety_margim, 120-safety_margim],
+                            [-60+safety_margim, 60-safety_margim],
+                            [-60+safety_margim, 60-safety_margim],], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
