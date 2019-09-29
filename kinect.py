@@ -121,7 +121,7 @@ class Kinect():
         coord2 = coord2.flatten()
         ma_vect = np.dot(np.dot(np.linalg.inv(np.dot(np.transpose(A),A)),np.transpose(A)),coord2)
         #print(ma_vect)
-        matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]],[0,0,1]]
+        matrix_affine = [[ma_vect[0],ma_vect[1],ma_vect[2]],[ma_vect[3],ma_vect[4],ma_vect[5]]]
         return matrix_affine
 
     def getAffineTransform3(self, coord1, coord2):
@@ -154,11 +154,11 @@ class Kinect():
         TODO:
         Using an Affine transformation, transform the depth frame to match the RGB frame
         """
-        #print(self.depth2rgb_affine)
-        frame2 = np.empty([np.size(frame,0),np.size(frame,1)])
-        cv2.warpPerspective(frame,np.asarray(self.depth2rgb_affine),(np.size(frame,0),np.size(frame,1)),frame2)
-        print(frame2[23][24])
-        return frame2
+        
+        #self.depth2rgb_affine =cv2.getPerspectiveTransform(self.depth_click_points,self.rgb_click_points)
+        
+        self.depth2rgb_affine = np.array(self.depth2rgb_affine)
+        return cv2.warpAffine(frame,self.depth2rgb_affine,(640,480))
        
         #rgb_frame = np.dot(self.depth2rgb_affine,frame)
         #return rgb_frame

@@ -257,10 +257,10 @@ class Gui(QMainWindow):
             if(self.kinect.currentDepthFrame.any() != 0):
                 z = self.kinect.currentDepthFrame[y][x]
                 self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" % (x,y,z))
-                #depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
+                depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
                 if self.kinect.kinectCalibrated == True :
                     world_frame = np.dot(self.sm.projection,[x,y,1])
-                    self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" % (world_frame[0],world_frame[1],world_frame[2]))
+                    self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" % (world_frame[0],world_frame[1],depth))
                 else :
                     self.ui.rdoutMouseWorld.setText("(-,-,-)")
 
