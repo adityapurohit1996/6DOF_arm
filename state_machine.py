@@ -1,4 +1,5 @@
 import time
+import cv2
 import numpy as np
 from kinematics import *
 
@@ -15,6 +16,8 @@ class StateMachine():
         self.status_message = "State: Idle"
         self.current_state = "idle"
         self.next_state = "idle"
+        self.projection = np.identity(3)
+
         self.IK_target = self.rexarm.get_positions
 
     def set_next_state(self, state):
@@ -213,7 +216,7 @@ class StateMachine():
                             "upper left corner of board",
                             "upper right corner of board",
                             "lower right corner of board",
-                            "center of shoulder motor"]
+                            "corner of the tape"]
         i = 0
         for j in range(5):
             self.status_message = "Calibration - Click %s in RGB image" % location_strings[j]
@@ -234,10 +237,42 @@ class StateMachine():
                     i = i + 1
                     self.kinect.new_click = False
    
-        print(self.kinect.rgb_click_points)
-        print(self.kinect.depth_click_points)
+  
+        Zc = 939
+        b = np.transpose([-303.2,-303.2,303.2,-303.2,303.2,303.2,-303.2,303.2,179.38-303.2,174-303.2])
+        World_points = np.array([[-303.2,-303.2,Zc],[-303.2,303.2,Zc],[303.2,303.2,Zc],[303.2,-303.2,Zc],[174.38-303.2,176-303.2,Zc]],dtype= np.float64)
+        Camera_coord =np.array([])
+        #intrinsic_matrix = self.kinect.loadCameraCalibration()
 
-        """TODO Perform camera calibration here"""
+        #intrinsic matrix from camera_cal.py
+        intrinsic_matrix = np.array([[ 526.17413472 ,   0   ,       325.10510152],
+                            [   0      ,    526.04886194,  276.03701925],
+                            [   0 ,           0     ,       1        ]])
 
+        inv_intrinsic_matrix = np.linalg.inv(intrinsic_matrix)
+        
+
+        #get the affine transform from depth image to affine image
+        self.kinect.depth2rgb_affine = self.kinect.getAffineTransform(self.kinect.depth_click_points,self.kinect.rgb_click_points)
+
+        # Generate Camera coordinates from image coordinates
+        for i,rgb in enumerate (self.kinect.rgb_click_points) :
+            a = np.array([rgb[0],rgb[1],1])
+            a = np.transpose(a)
+            coord =Zc* np.dot(inv_intrinsic_matrix ,a) 
+            coord =[coord]
+            if i == 0:
+                Camera_coord = coord
+            else :
+                Camera_coord = np.concatenate ((Camera_coord,coord),axis = 0)
+
+        # Find the extrinsic matrix for relation between camera coordinates and world coordinates
+
+        extrinsic_affine = self.kinect.getAffineTransform3(Camera_coord,np.squeeze(World_points))
+
+        # Find the projection matrix between image and world coordinates
+        self.projection =  np.dot(extrinsic_affine, inv_intrinsic_matrix)
+       
+        self.kinect.kinectCalibrated = True
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)

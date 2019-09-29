@@ -268,7 +268,17 @@ class Gui(QMainWindow):
             if(self.kinect.currentDepthFrame.any() != 0):
                 z = self.kinect.currentDepthFrame[y][x]
                 self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" % (x,y,z))
-                self.ui.rdoutMouseWorld.setText("(-,-,-)")
+                #convert camera data to depth in mm
+                depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
+
+                if self.kinect.kinectCalibrated == True :
+                    world_frame = depth * np.dot(self.sm.projection,[x,y,1])
+                    #To convert depth to IK convention
+                    world_frame[2] = -world_frame[2] + 939
+                    self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" % (world_frame[0],world_frame[1],world_frame[2]))
+                    self.kinect.world_frame = world_frame # use this variable in click and grab 
+                else :
+                    self.ui.rdoutMouseWorld.setText("(-,-,-)")
 
     def mousePressEvent(self, QMouseEvent):
         """ 
