@@ -238,6 +238,7 @@ class Kinect():
 
 
 def test():
+    print('open!!')
     kinect = Kinect()
     kinect.loadDepthFrame()
     kinect.loadVideoFrame()
