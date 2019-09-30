@@ -10,19 +10,19 @@ Implement the missing functions
 add anything you see fit
 
 """
-
 """ Radians to/from  Degrees conversions """
 D2R = 3.141592/180.0
 R2D = 180.0/3.141592
-
+#gripper close -0.9599 
+#gripper open 0.5759
 class Rexarm():
     def __init__(self, joints, gripper):
         """Recorded"""
         self.waypoints_recorded = []
         self.joints = joints
         self.gripper = gripper
-        self.gripper_open_pos = np.deg2rad(-60.0)
-        self.gripper_closed_pos = np.deg2rad(30.0)
+        self.gripper_open_pos = 0.5759
+        self.gripper_closed_pos = -0.9599
         self.gripper_state = True
         self.estop = False
         """TODO: Find the physical angle limits of the Rexarm. Remember to keep track of this if you include more motors"""
@@ -32,7 +32,9 @@ class Rexarm():
                             [-25-90+safety_margim, 208-90-safety_margim],
                             [-110+safety_margim, 100-safety_margim],
                             [-180+safety_margim, 179.99-safety_margim],
-                            [-125+safety_margim, 120-safety_margim],], dtype=np.float)*D2R
+                            [-125+safety_margim, 120-safety_margim],
+                            [-60+safety_margim, 60-safety_margim],
+                            [-60+safety_margim, 60-safety_margim],], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
@@ -48,12 +50,12 @@ class Rexarm():
         self.move_fb = [0] *  self.num_joints
 
         # DH = [theta, di, ai, alpha]
-        self.DH_table = np.array([[0, 74.76+40.64, 0, -90],
+        self.DH_table = np.array([[0, 117.52, 0, -90],
                         [-90, 0, 99.58, 0],
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
-                        [0, 0, 0, 90]])
-                        # [-90, ***, 0, 0]]
+                        [0, 0, 0, 90],
+                        [0, 130.66, 0, 0]])
 
     def initialize(self):
         for joint in self.joints:
@@ -82,7 +84,10 @@ class Rexarm():
 
     def set_positions(self, joint_angles, update_now = True):
         self.clamp(joint_angles)
+        print(joint_angles)
         for i,joint in enumerate(self.joints):
+            #print(i)
+            #print(joint_angles[i])
             self.position[i] = joint_angles[i]
             if(update_now):
                 joint.set_position(joint_angles[i])
@@ -92,7 +97,7 @@ class Rexarm():
         print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
 
-        self.set_positions(joint_angles[0:5], update_now)
+        self.set_positions(joint_angles[0:6], update_now)
     
     def set_speeds_normalized_global(self, speed, update_now = True):
         for i,joint in enumerate(self.joints):
@@ -189,7 +194,7 @@ class Rexarm():
         T = FK_dh(self.joint_angles_fb, self.DH_table)
 
         R = get_euler_angles_from_T(T)/np.pi*180
-        D = np.dot(T,np.transpose([10, 0, 0, 1]))
+        D = np.dot(T,np.transpose([0, 0, 0, 1]))
 
         # print(D)
 

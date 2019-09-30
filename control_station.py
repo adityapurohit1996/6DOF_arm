@@ -104,10 +104,12 @@ class Gui(QMainWindow):
         elbw = DXL_MX(port_num, 3)
         wrst = DXL_AX(port_num, 4)
         wrst2 = DXL_AX(port_num, 5)
+        wrst3 = DXL_XL(port_num, 6)
+        hand = DXL_XL(port_num, 7)
 
         """Objects Using Other Classes"""
         self.kinect = Kinect()
-        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2),0)
+        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3,hand),0)
         self.tp = TrajectoryPlanner(self.rexarm)
         self.sm = StateMachine(self.rexarm, self.tp, self.kinect)
     
@@ -126,8 +128,9 @@ class Gui(QMainWindow):
         self.ui.sldrShoulder.valueChanged.connect(self.sliderChange)
         self.ui.sldrElbow.valueChanged.connect(self.sliderChange)
         self.ui.sldrWrist.valueChanged.connect(self.sliderChange)
-
         self.ui.sldrWrist2.valueChanged.connect(self.sliderChange)
+        self.ui.sldrWrist3.valueChanged.connect(self.sliderChange) 
+        self.ui.sldrHand.valueChanged.connect(self.sliderChange)
 
         self.ui.sldrMaxTorque.valueChanged.connect(self.sliderChange)
         self.ui.sldrSpeed.valueChanged.connect(self.sliderChange)
@@ -143,6 +146,10 @@ class Gui(QMainWindow):
         self.ui.btnUser11.clicked.connect(partial(self.sm.set_next_state, "IK_set_pose"))
         self.ui.btnUser12.setText("IK_Test")
         self.ui.btnUser12.clicked.connect(partial(self.sm.set_next_state, "IK_test"))
+        
+        self.ui.btnUser10.setText("Grab_Place")
+        self.ui.btnUser10.clicked.connect(partial(self.sm.set_next_state, "Grab_Place"))
+        
 
 
         """initalize manual control off"""
@@ -227,8 +234,9 @@ class Gui(QMainWindow):
         self.ui.rdoutShoulder.setText(str(self.ui.sldrShoulder.value()))
         self.ui.rdoutElbow.setText(str(self.ui.sldrElbow.value()))
         self.ui.rdoutWrist.setText(str(self.ui.sldrWrist.value()))
-
         self.ui.rdoutWrist2.setText(str(self.ui.sldrWrist2.value()))
+        self.ui.rdoutWrist2.setText(str(self.ui.sldrWrist3.value()))
+        self.ui.rdoutWrist2.setText(str(self.ui.sldrHand.value()))
 
         self.ui.rdoutTorq.setText(str(self.ui.sldrMaxTorque.value()) + "%")
         self.ui.rdoutSpeed.setText(str(self.ui.sldrSpeed.value()) + "%")
@@ -238,7 +246,9 @@ class Gui(QMainWindow):
                            self.ui.sldrShoulder.value()*D2R,
                            self.ui.sldrElbow.value()*D2R,
                            self.ui.sldrWrist.value()*D2R,
-                           self.ui.sldrWrist2.value()*D2R])
+                           self.ui.sldrWrist2.value()*D2R,
+                           self.ui.sldrWrist3.value()*D2R,
+                           self.ui.sldrHand.value()*D2R])
         self.rexarm.set_positions(joint_positions, update_now = False)
 
     def directControlChk(self, state):
@@ -279,6 +289,7 @@ class Gui(QMainWindow):
                     self.kinect.world_frame = world_frame # use this variable in click and grab 
                 else :
                     self.ui.rdoutMouseWorld.setText("(-,-,-)")
+    
 
     def mousePressEvent(self, QMouseEvent):
         """ 
