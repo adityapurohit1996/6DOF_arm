@@ -289,6 +289,7 @@ class Gui(QMainWindow):
                     self.kinect.world_frame = world_frame # use this variable in click and grab 
                 else :
                     self.ui.rdoutMouseWorld.setText("(-,-,-)")
+    
 
     def mousePressEvent(self, QMouseEvent):
         """ 

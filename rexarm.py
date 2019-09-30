@@ -50,7 +50,7 @@ class Rexarm():
         self.move_fb = [0] *  self.num_joints
 
         # DH = [theta, di, ai, alpha]
-        self.DH_table = np.array([[0, 74.76+40.64, 0, -90],
+        self.DH_table = np.array([[0, 117.52, 0, -90],
                         [-90, 0, 99.58, 0],
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
@@ -97,7 +97,7 @@ class Rexarm():
         print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
 
-        self.set_positions(joint_angles[0:7], update_now)
+        self.set_positions(joint_angles[0:6], update_now)
     
     def set_speeds_normalized_global(self, speed, update_now = True):
         for i,joint in enumerate(self.joints):
@@ -194,7 +194,7 @@ class Rexarm():
         T = FK_dh(self.joint_angles_fb, self.DH_table)
 
         R = get_euler_angles_from_T(T)/np.pi*180
-        D = np.dot(T,np.transpose([10, 0, 0, 1]))
+        D = np.dot(T,np.transpose([0, 0, 0, 1]))
 
         # print(D)
 
