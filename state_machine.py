@@ -99,7 +99,6 @@ class StateMachine():
         print(self.kinect.cube_click_points)
         self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
         self.current_state = "Grab_Place"
-        '''
         i = 0
         for j in range(2):
             self.status_message = "Click the current location of cube and location the cube should be placed"
@@ -110,7 +109,7 @@ class StateMachine():
                     i = i + 1
                     self.kinect.new_click = False        
         i = 0
-        '''
+        
         coordinates_global = np.array([3,180, 120, 1],)
         orientation_gripper = np.array([[0, 0, 0],
                              [0, 0, 0],
