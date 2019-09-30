@@ -17,7 +17,6 @@ class StateMachine():
         self.current_state = "idle"
         self.next_state = "idle"
         self.projection = np.identity(3)
-
         self.IK_target = self.rexarm.get_positions
 
     def set_next_state(self, state):
@@ -55,6 +54,8 @@ class StateMachine():
                 self.IK_set_pose()
             if(self.next_state == "IK_test"):
                 self.IK_test()
+            if(self.next_state == "Grab_Place"):
+                self.Grab_Place()
 
                 
         if(self.current_state == "estop"):
@@ -86,10 +87,77 @@ class StateMachine():
         if(self.current_state == "IK_test"):
             if(self.next_state == "idle"):
                 self.idle()
+        if(self.current_state == "Grab_Place"):
+            if(self.next_state == "idle"):
+                self.idle()
                 
                
 
     """Functions run for each state"""
+    def rgb2world(self):
+        """ 
+        Convert rgb points at mouse click into world coordinates 
+        """
+        x = self.kinect.last_click[0]
+        y = self.kinect.last_click[1]
+        world_frame = np.zeros((1,3))
+        if(self.kinect.currentDepthFrame.any() != 0):
+            z = self.kinect.currentDepthFrame[y][x]
+            #convert camera data to depth in mm
+            depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
+
+            if self.kinect.kinectCalibrated == True :
+                world_frame = depth * np.dot(self.projection,[x,y,1])
+                #To convert depth to IK convention
+                world_frame[2] = -world_frame[2] + 939
+
+        return world_frame
+
+    def Grab_Place(self):
+        self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
+        self.current_state = "Grab_Place"
+        world_frame = np.zeros((2,3))
+        i = 0
+        for j in range(2):
+            self.status_message = "Click the current location of cube and location the cube should be placed"
+            while (i <= j):
+                self.rexarm.get_feedback()
+                if(self.kinect.new_click == True):
+                    self.kinect.cube_click_points[i] = self.kinect.last_click.copy()
+                    i = i + 1
+                    self.kinect.new_click = False  
+                world_frame[j] = self.rgb2world()     
+        i = 0
+        #print(self.kinect.cube_click_points)
+        #print(world_frame)
+
+        theta = np.deg2rad(30)
+        #coordinates_global = np.array([110,10, 42, 1],)
+        coordinates_global = np.append(world_frame[0],[1])
+        #print("CG",coordinates_global)
+        orientation_gripper = np.array([[-np.cos(theta), -np.sin(theta), 0],
+                             [np.sin(theta), -np.cos(theta), 0],
+                             [0, 0, -1]])
+        pose = np.zeros((4,4))
+        pose[0:3,0:3]=orientation_gripper;
+        pose[:,3] = np.transpose(coordinates_global)
+        print(pose)
+        print("IK debug",pose[0:3, 3])
+        #test = np.array([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
+        #print(test)
+        #print(test[0:3,0:3])
+
+        #joint_angles_IK = IK(pose,self.rexarm.DH_table)
+        #print("joint_angles_IK",joint_angles_IK)
+        self.rexarm.set_pose(pose)
+        self.rexarm.pause(3)
+
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+        
+
+    
+
     def IK_set_pose(self):
         self.status_message = "State: IK_set_pose - setting pose for IK test"
         self.current_state = "IK_set_pose"
@@ -240,7 +308,7 @@ class StateMachine():
   
         Zc = 939
         b = np.transpose([-303.2,-303.2,303.2,-303.2,303.2,303.2,-303.2,303.2,179.38-303.2,174-303.2])
-        World_points = np.array([[-303.2,-303.2,Zc],[-303.2,303.2,Zc],[303.2,303.2,Zc],[303.2,-303.2,Zc],[174.38-303.2,176-303.2,Zc]],dtype= np.float64)
+        World_points = np.array([[-303.2,-303.2,Zc],[-303.2,303.2,Zc],[303.2,303.2,Zc],[303.2,-303.2,Zc],[179-303.2,174-303.2,Zc]],dtype= np.float64)
         Camera_coord =np.array([])
         #intrinsic_matrix = self.kinect.loadCameraCalibration()
 
