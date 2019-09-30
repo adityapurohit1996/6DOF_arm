@@ -182,6 +182,14 @@ class Kinect():
         You will need to locate
         blocks in 3D space
         """
+        # rects: (x,y), (width, length), theta
+        rects, masks = self.detectBlocksInDepthImage()
+
+        # filter w.r.t colors
+
+
+        return rects[0][0], rects[0][2]*np.pi/180
+        # return (x, y, theta)
 
         
 
@@ -192,12 +200,41 @@ class Kinect():
         in the depth image
         """
         I_depth = self.currentDepthFrame
-        RGB_depth = self.currentVideoFrame
 
-        # cv2.threshold(I_depth, )
-        print I_depth
-        cv2.imshow('Depth', I_depth)
-        cv2.waitKey()
+        # Region of interest!!
+        ROI = np.zeros((I_depth.shape[0], I_depth.shape[1],1),np.uint8)
+        ROI[66:434,137:506,0] = I_depth[66:434,137:506]
+        ret, I_th = cv2.threshold(ROI, 177, 255, cv2.THRESH_BINARY_INV)
+
+        I_th = cv2.blur(I_th, (5,5))
+        image, contours,hierarchy = cv2.findContours(I_th,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+
+        rects = list()
+        masks = list()
+        for i,contour in enumerate(contours):
+            area = cv2.contourArea(contour)
+
+            if area>2000 or area<100:
+                # contours.remove(contour)
+                pass
+            else:
+                # print(contour)
+                mask = np.zeros(I_depth.shape,np.uint8)
+
+                cv2.drawContours(ROI, contours, i, 255, -1)
+                rects.append(cv2.minAreaRect(contour))
+                masks.append(cv2.drawContours(mask, contours, i, 255, -1))
+
+        # cv2.imshow('Depth', I_depth)
+        # cv2.imshow('Depth_th', I_th)
+        # cv2.imshow('I_crop', ROI)
+        # cv2.imshow('mask 1', masks[0])
+        # cv2.imshow('mask 2', masks[1])
+        # print(rects[0])
+
+        # cv2.waitKey()
+
+        return rects, masks
 
 
 def test():
@@ -205,7 +242,8 @@ def test():
     kinect.loadDepthFrame()
     kinect.loadVideoFrame()
 
-    kinect.detectBlocksInDepthImage()
+    # kinect.detectBlocksInDepthImage()
+    print(kinect.blockDetector())
 
 
 
