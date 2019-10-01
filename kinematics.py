@@ -70,8 +70,8 @@ def IK(pose, DH_table):
     # 0. DH Parameters
     d1 = DH_table[0,1]
     d4 = DH_table[3,1]
-    # d6 = DH_table[5,1]
-    d6 = 0
+    d6 = DH_table[5,1]
+    # d6 = 0
 
     a2 = DH_table[1,2]
 
@@ -98,6 +98,7 @@ def IK(pose, DH_table):
         r = Y0w/np.sin(theta1)    # theta1 might = 90
 
     # theta2, theta3 could be 2 set
+    # TODO check theta3 is reachable!!!!!
     theta3 = np.arccos((Zd**2+r**2-a2**2-d4**2) / (2*a2*d4))
     theta2 = np.arctan2(r, Zd) - np.arctan2(d4*np.sin(theta3), a2+d4*np.cos(theta3))
 
@@ -226,8 +227,8 @@ def test():
                         [-90, 0, 99.58, 0],
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
-                        [0, 0, 0, 90]])
-                        # [-90, ***, 0, 0]]    
+                        [0, 0, 0, 90],
+                        [-90, 130.62, 0, 0]])
 
     th1 = 180
     th2 = 45
