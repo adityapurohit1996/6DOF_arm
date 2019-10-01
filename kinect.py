@@ -17,6 +17,7 @@ class Kinect():
         self.kinectCalibrated = False
         self.last_click = np.array([0,0])
         self.new_click = False
+        self.cube_click_points = np.zeros((2,2),int)
         self.rgb_click_points = np.zeros((5,2),int)
         self.depth_click_points = np.zeros((5,2),int)
         self.world_frame = np.zeros(3)

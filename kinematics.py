@@ -30,7 +30,6 @@ def FK_dh(joint_angles, DH_table):
         Ti = T_frrom_DH(theta, DH[1], DH[2], phi)
      
         T = np.dot(T, Ti)
-    # print(T)
     return T
 
 def T_frrom_DH(theta, d, a, phi):
@@ -70,8 +69,8 @@ def IK(pose, DH_table):
     # 0. DH Parameters
     d1 = DH_table[0,1]
     d4 = DH_table[3,1]
-    # d6 = DH_table[5,1]
-    d6 = 0
+    d6 = DH_table[5,1]
+    #d6 = 0
 
     a2 = DH_table[1,2]
 
