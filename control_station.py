@@ -105,11 +105,11 @@ class Gui(QMainWindow):
         wrst = DXL_AX(port_num, 4)
         wrst2 = DXL_AX(port_num, 5)
         wrst3 = DXL_XL(port_num, 6)
-        hand = DXL_XL(port_num, 7)
+        gripper = DXL_XL(port_num, 7)
 
         """Objects Using Other Classes"""
         self.kinect = Kinect()
-        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3,hand),0)
+        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3),gripper)
         self.tp = TrajectoryPlanner(self.rexarm)
         self.sm = StateMachine(self.rexarm, self.tp, self.kinect)
     
@@ -247,9 +247,11 @@ class Gui(QMainWindow):
                            self.ui.sldrElbow.value()*D2R,
                            self.ui.sldrWrist.value()*D2R,
                            self.ui.sldrWrist2.value()*D2R,
-                           self.ui.sldrWrist3.value()*D2R,
-                           self.ui.sldrHand.value()*D2R])
+                           self.ui.sldrWrist3.value()*D2R])
         self.rexarm.set_positions(joint_positions, update_now = False)
+        # self.rexarm.pause(0.1)
+        self.rexarm.set_gripper_position(self.ui.sldrHand.value()*D2R, update_now = False)
+        # self.rexarm.gripper.set_position(self.ui.sldrHand.value()*D2R)
 
     def directControlChk(self, state):
         if state == Qt.Checked:
