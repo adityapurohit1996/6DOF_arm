@@ -55,7 +55,10 @@ class StateMachine():
             if(self.next_state == "IK_test"):
                 self.IK_test()
             if(self.next_state == "Grab_Place"):
-                self.Grab_Place()
+                theta = np.array([[30, 0, 0],[30, 0, 0]])
+                theta = np.deg2rad(theta)
+                z_offset = 30 #mm
+                self.Grab_Place(theta,z_offset)
 
                 
         if(self.current_state == "estop"):
@@ -113,45 +116,52 @@ class StateMachine():
 
         return world_frame
 
-    def Grab_Place(self):
+    def Grab_Place(self, theta, z_offset):
         self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
         self.current_state = "Grab_Place"
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
         world_frame = np.zeros((2,3))
+        #Get the World Coordinates of the pick up and drop off from mouse clicks============================
         i = 0
         for j in range(2):
             self.status_message = "Click the current location of cube and location the cube should be placed"
             while (i <= j):
-                self.rexarm.get_feedback()
+                #self.rexarm.get_feedback()
                 if(self.kinect.new_click == True):
                     self.kinect.cube_click_points[i] = self.kinect.last_click.copy()
                     i = i + 1
                     self.kinect.new_click = False  
                 world_frame[j] = self.rgb2world()     
         i = 0
-        #print(self.kinect.cube_click_points)
-        #print(world_frame)
-
-        theta = np.deg2rad(30)
-        #coordinates_global = np.array([110,10, 42, 1],)
-        coordinates_global = np.append(world_frame[0],[1])
-        #print("CG",coordinates_global)
-        orientation_gripper = np.array([[-np.cos(theta), -np.sin(theta), 0],
-                             [np.sin(theta), -np.cos(theta), 0],
-                             [0, 0, -1]])
+        #=====================================================================================================
+        print("World Frame Clicked",world_frame)
+        world_frame[0:2,2] += z_offset
+        homogeneous = np.transpose(np.ones((1,2)))
+        coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
+        
+        orientation_gripper_test = -1*rotation(theta[0][0],'z')
+        print("test",orientation_gripper_test)
+        orientation_gripper = np.zeros((4,4))
         pose = np.zeros((4,4))
-        pose[0:3,0:3]=orientation_gripper;
-        pose[:,3] = np.transpose(coordinates_global)
-        print(pose)
-        print("IK debug",pose[0:3, 3])
-        #test = np.array([[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16]])
-        #print(test)
-        #print(test[0:3,0:3])
+        size = np.size(coordinates_global,0)
 
-        #joint_angles_IK = IK(pose,self.rexarm.DH_table)
-        #print("joint_angles_IK",joint_angles_IK)
-        self.rexarm.set_pose(pose)
-        self.rexarm.pause(3)
+        for i in range(size):
+            orientation_gripper = np.dot(np.dot(-1*rotation(theta[i][0],'z'),rotation(theta[i][1],'y')),rotation(theta[i][2],'z'))
+            print("actual",orientation_gripper)
+            pose[0:4,0:4]=orientation_gripper
+            pose[:,3] = np.transpose(coordinates_global[i])
+            print(pose)
+            #self.rexarm.set_pose(pose)
+            self.rexarm.pause(2)
+            if i==0:
+                self.rexarm.close_gripper()
 
+            else: 
+                print("Made it")
+                self.rexarm.open_gripper()
+
+            self.rexarm.pause(10)
+        
         self.set_next_state("idle")
         self.rexarm.get_feedback()
         

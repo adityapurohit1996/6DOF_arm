@@ -33,14 +33,14 @@ class Rexarm():
                             [-110+safety_margim, 100-safety_margim],
                             [-180+safety_margim, 179.99-safety_margim],
                             [-125+safety_margim, 120-safety_margim],
-                            [-60+safety_margim, 60-safety_margim],
-                            [-60+safety_margim, 60-safety_margim],], dtype=np.float)*D2R
+                            [-60+safety_margim, 60-safety_margim]], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
         self.position = [0.0] * self.num_joints     # degrees
         self.speed = [1.0] * self.num_joints        # 0 to 1
         self.max_torque = [1.0] * self.num_joints   # 0 to 1
+        self.gripper_position = 0.0
 
         """ Feedback Values """
         self.joint_angles_fb = [0.0] * self.num_joints # degrees
@@ -64,18 +64,23 @@ class Rexarm():
             joint.set_torque_limit(0.5)
             joint.set_speed(0.25)
         if(self.gripper != 0):
+            print("initialize!!")
+            self.gripper.enable_torque()
+            self.gripper.set_position(self.gripper_closed_pos)
             self.gripper.set_torque_limit(1.0)
             self.gripper.set_speed(0.8)
-            self.close_gripper()
+            #self.close_gripper()
 
     def open_gripper(self):
         """ TODO """
         self.gripper_state = False
+        self.gripper.set_position(self.gripper_open_pos)
         pass
 
     def close_gripper(self):
         """ TODO """
         self.gripper_state = True
+        self.gripper.set_position(self.gripper_closed_pos)
         pass
 
     def toggle_gripper(self):
@@ -87,10 +92,18 @@ class Rexarm():
         print(joint_angles)
         for i,joint in enumerate(self.joints):
             #print(i)
+            #print(joint)
             #print(joint_angles[i])
             self.position[i] = joint_angles[i]
             if(update_now):
                 joint.set_position(joint_angles[i])
+
+    def set_gripper_position(self, gripper_position, update_now = True):
+        
+        self.gripper_position = gripper_position
+        if(update_now):
+            self.gripper.set_position(gripper_position)
+
 
     def set_pose(self, pose, update_now = True):
         joint_angles = IK(pose, self.DH_table)
@@ -130,6 +143,7 @@ class Rexarm():
         self.set_positions(self.position)
         self.set_speeds_normalized(self.speed)
         self.set_torque_limits(self.max_torque)
+        self.gripper.set_position(self.gripper_position)
 
     def enable_torque(self):
         for joint in self.joints:
