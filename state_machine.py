@@ -16,7 +16,8 @@ class StateMachine():
         self.status_message = "State: Idle"
         self.current_state = "idle"
         self.next_state = "idle"
-        self.projection = np.identity(3)
+        
+
         self.IK_target = self.rexarm.get_positions
 
     def set_next_state(self, state):
@@ -54,6 +55,8 @@ class StateMachine():
                 self.IK_set_pose()
             if(self.next_state == "IK_test"):
                 self.IK_test()
+            if(self.next_state == "Detect Blocks") :
+                self.BlockDetection()
             if(self.next_state == "Grab_Place"):
                 theta = np.array([[30, 0, 0],[30, 0, 0]])
                 theta = np.deg2rad(theta)
@@ -90,6 +93,10 @@ class StateMachine():
         if(self.current_state == "IK_test"):
             if(self.next_state == "idle"):
                 self.idle()
+        if(self.current_state == "Detect Blocks"):
+            if(self.next_state == "idle"):
+                self.idle()
+        
         if(self.current_state == "Grab_Place"):
             if(self.next_state == "idle"):
                 self.idle()
@@ -332,6 +339,7 @@ class StateMachine():
 
         #get the affine transform from depth image to affine image
         self.kinect.depth2rgb_affine = self.kinect.getAffineTransform(self.kinect.depth_click_points,self.kinect.rgb_click_points)
+        print(self.kinect.depth2rgb_affine)
 
         # Generate Camera coordinates from image coordinates
         for i,rgb in enumerate (self.kinect.rgb_click_points) :
@@ -349,8 +357,14 @@ class StateMachine():
         extrinsic_affine = self.kinect.getAffineTransform3(Camera_coord,np.squeeze(World_points))
 
         # Find the projection matrix between image and world coordinates
-        self.projection =  np.dot(extrinsic_affine, inv_intrinsic_matrix)
+        self.kinect.projection =  np.dot(extrinsic_affine, inv_intrinsic_matrix)
        
         self.kinect.kinectCalibrated = True
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)
+
+    def BlockDetection(self) :
+        self.kinect.loadDepthFrame()
+        print("Loaded depth frame")
+        x,y = self.kinect.detectBlocksInDepthImage()
+        print(x,y)

@@ -37,7 +37,7 @@ DEVICENAME = "/dev/ttyACM0".encode('utf-8')
 
 """Threads"""
 class VideoThread(QThread):
-    updateFrame = pyqtSignal(QImage, QImage)
+    updateFrame = pyqtSignal(QImage, QImage, QImage)
 
     def __init__(self, kinect, parent=None):
         QThread.__init__(self, parent=parent) 
@@ -49,7 +49,8 @@ class VideoThread(QThread):
             self.kinect.captureDepthFrame()
             rgb_frame = self.kinect.convertFrame()
             depth_frame = self.kinect.convertDepthFrame()
-            self.updateFrame.emit(rgb_frame, depth_frame)
+            block_frame = self.kinect.convertBlockFrame()
+            self.updateFrame.emit(rgb_frame, depth_frame,block_frame)
             time.sleep(.03)
 
 class LogicThread(QThread):   
@@ -142,6 +143,9 @@ class Gui(QMainWindow):
         self.ui.btnUser4.setText("TP test")
         self.ui.btnUser4.clicked.connect(partial(self.sm.set_next_state, "TP test"))
 
+        self.ui.btnUser5.setText("Detect blocks")
+        self.ui.btnUser5.clicked.connect(partial(self.sm.set_next_state, "Detect Blocks"))
+
         self.ui.btnUser11.setText("IK_set_pose")
         self.ui.btnUser11.clicked.connect(partial(self.sm.set_next_state, "IK_set_pose"))
         self.ui.btnUser12.setText("IK_Test")
@@ -184,12 +188,14 @@ class Gui(QMainWindow):
 
     """ Slots attach callback functions to signals emitted from threads"""
 
-    @pyqtSlot(QImage, QImage)
-    def setImage(self, rgb_image, depth_image):
+    @pyqtSlot(QImage, QImage, QImage)
+    def setImage(self, rgb_image, depth_image,block_image):
         if(self.ui.radioVideo.isChecked()):
             self.ui.videoDisplay.setPixmap(QPixmap.fromImage(rgb_image))
         if(self.ui.radioDepth.isChecked()):
             self.ui.videoDisplay.setPixmap(QPixmap.fromImage(depth_image))
+        if(self.ui.radioBlockDetect.isChecked()):
+            self.ui.videoDisplay.setPixmap(QPixmap.fromImage(block_image))
 
     @pyqtSlot(list)
     def updateJointReadout(self, joints):
@@ -283,15 +289,14 @@ class Gui(QMainWindow):
                 #convert camera data to depth in mm
                 depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
 
-                if self.kinect.kinectCalibrated == True :
-                    world_frame = depth * np.dot(self.sm.projection,[x,y,1])
-                    #To convert depth to IK convention
-                    world_frame[2] = -world_frame[2] + 939
-                    self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" % (world_frame[0],world_frame[1],world_frame[2]))
-                    self.kinect.world_frame = world_frame # use this variable in click and grab 
-                else :
-                    self.ui.rdoutMouseWorld.setText("(-,-,-)")
-    
+               # if self.kinect.kinectCalibrated == True :
+                world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
+                #To convert depth to IK convention
+                world_frame[2] = -world_frame[2] + 939
+                self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" % (world_frame[0],world_frame[1],world_frame[2]))
+                self.kinect.world_frame = world_frame # use this variable in click and grab 
+                #else :
+                #    self.ui.rdoutMouseWorld.setText("(-,-,-)")
 
     def mousePressEvent(self, QMouseEvent):
         """ 
