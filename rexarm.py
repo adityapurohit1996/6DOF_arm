@@ -66,7 +66,7 @@ class Rexarm():
         if(self.gripper != 0):
             print("initialize!!")
             self.gripper.enable_torque()
-            self.gripper.set_position(self.gripper_closed_pos)
+            self.gripper.set_position(self.gripper_open_pos)
             self.gripper.set_torque_limit(1.0)
             self.gripper.set_speed(0.8)
             #self.close_gripper()

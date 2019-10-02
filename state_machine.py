@@ -58,9 +58,9 @@ class StateMachine():
             if(self.next_state == "Detect Blocks") :
                 self.BlockDetection()
             if(self.next_state == "Grab_Place"):
-                theta = np.array([[30, 0, 0],[30, 0, 0]])
+                theta = np.array([[0, 0, 0],[0, 0, 0]])
                 theta = np.deg2rad(theta)
-                z_offset = 30 #mm
+                z_offset = 60 #mm
                 self.Grab_Place(theta,z_offset)
 
                 
@@ -111,15 +111,15 @@ class StateMachine():
         x = self.kinect.last_click[0]
         y = self.kinect.last_click[1]
         world_frame = np.zeros((1,3))
+        #print("Click Coordinates",x,y)
         if(self.kinect.currentDepthFrame.any() != 0):
             z = self.kinect.currentDepthFrame[y][x]
             #convert camera data to depth in mm
             depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
 
-            if self.kinect.kinectCalibrated == True :
-                world_frame = depth * np.dot(self.projection,[x,y,1])
-                #To convert depth to IK convention
-                world_frame[2] = -world_frame[2] + 939
+        world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
+        #To convert depth to IK convention
+        world_frame[2] = -world_frame[2] + 939
 
         return world_frame
 
@@ -127,6 +127,7 @@ class StateMachine():
         self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
         self.current_state = "Grab_Place"
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.open_gripper()
         world_frame = np.zeros((2,3))
         #Get the World Coordinates of the pick up and drop off from mouse clicks============================
         i = 0
@@ -146,8 +147,8 @@ class StateMachine():
         homogeneous = np.transpose(np.ones((1,2)))
         coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
         
-        orientation_gripper_test = -1*rotation(theta[0][0],'z')
-        print("test",orientation_gripper_test)
+        #orientation_gripper_test = -1*rotation(theta[0][0],'z')
+        #print("test",orientation_gripper_test)
         orientation_gripper = np.zeros((4,4))
         pose = np.zeros((4,4))
         size = np.size(coordinates_global,0)
@@ -158,8 +159,12 @@ class StateMachine():
             pose[0:4,0:4]=orientation_gripper
             pose[:,3] = np.transpose(coordinates_global[i])
             print(pose)
-            #self.rexarm.set_pose(pose)
-            self.rexarm.pause(2)
+            self.rexarm.set_pose(pose)
+            self.rexarm.pause(4)
+            pose[2][3] = 13
+            #print(pose)
+            self.rexarm.set_pose(pose)
+            self.rexarm.pause(3)
             if i==0:
                 self.rexarm.close_gripper()
 
@@ -167,8 +172,17 @@ class StateMachine():
                 print("Made it")
                 self.rexarm.open_gripper()
 
-            self.rexarm.pause(10)
-        
+            self.rexarm.pause(1)
+
+        pose[2][3] = z_offset
+        print(pose)
+        self.rexarm.set_speeds_normalized_global(0.05,update_now=True)
+        self.rexarm.set_pose(pose)
+        self.rexarm.pause(2)
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+
+        for joint in self.rexarm.joints:
+            joint.set_position(0.0)
         self.set_next_state("idle")
         self.rexarm.get_feedback()
         

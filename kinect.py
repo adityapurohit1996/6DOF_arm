@@ -264,7 +264,7 @@ class Kinect():
                 y=temp[1]
                 z = self.currentDepthFrame[int(y)][int(x)]
                 depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
-                print(depth)
+               # print(depth)
                 if depth > max_depth or depth<min_depth :
                     pass
                 else :
@@ -285,7 +285,8 @@ class Kinect():
         #cv2.imshow('mask 1', masks[0])
         #cv2.imshow('mask 2', masks[1])
         if rects :
-           print(rects)
+          # print(rects)
+          pass
 
 
         return mask
