@@ -95,7 +95,7 @@ class Rexarm():
 
     def set_positions(self, joint_angles, update_now = True):
         self.clamp(joint_angles)
-        print(joint_angles)
+        # print(joint_angles)
         for i,joint in enumerate(self.joints):
             #print(i)
             #print(joint)
@@ -112,7 +112,7 @@ class Rexarm():
         isTOP = False
 
         if(desire_mode == "GRAB_FROM_TOP"):
-            T_ori[0:3,0:3] = np.array([[-np.cos(theta), -np.sin(theta), 0],
+            T_grab[0:3,0:3] = np.array([[-np.cos(theta), -np.sin(theta), 0],
                                     [np.sin(theta), -np.cos(theta), 0],
                                     [0, 0, -1]])
             
@@ -126,16 +126,20 @@ class Rexarm():
             T_prep[2,3] = Z+delta_Z
             _, REACHABLE_above = IK(T_prep, self.DH_table)
 
+            print "From TOP:"
+            print "grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above
+
             if REACHABLE_grab and REACHABLE_above:
                 grap_pose = T_grab
-                prep_pose = T_prepp
+                prep_pose = T_prep
                 isTOP = True
+        print "isTOP: ", isTOP
 
-        if(~isTOP):
+        if(not isTOP):
             if(X >= 0):
                 if(Y >= 0):
                     theta = theta
-                   else:
+                else:
                     theta = theta - np.pi/2
             else:
                 if(Y >= 0):
@@ -150,13 +154,16 @@ class Rexarm():
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
 
             T_prep = np.copy(T_grab)
-            T_grab[0,3] = X - delta_Z*np.cos(theta)
-            T_grab[1,3] = Y - delta_Z*np.sin(theta)
+            T_prep[0,3] = X - delta_Z*np.cos(theta)
+            T_prep[1,3] = Y - delta_Z*np.sin(theta)
             _, REACHABLE_side = IK(T_grab, self.DH_table)
+
+            print "From Horizon:"
+            print "grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above
                 
             if REACHABLE_grab and REACHABLE_side:
                 grap_pose = T_grab
-                prep_pose = T_prepp
+                prep_pose = T_prep
             else:
                 T_grab[:] = np.nan
                 T_prep[:] = np.nan
@@ -169,6 +176,10 @@ class Rexarm():
         '''
         T_grab, T_prep, isTOP = self.check_fesible_IK(pose_of_block,offset)
         
+        print("Grab", T_grab)
+        print("Prep", T_prep)
+        print("isTOP", isTOP)
+
         if(isTOP):
             self.set_pose(T_prep)
             self.pause(3)
@@ -178,7 +189,7 @@ class Rexarm():
             self.pause(1)
             self.set_pose(T_prep)
             self.pause(3)
-        if(T_grab[0] ~= np.nan):
+        elif(T_grab[0,0] != np.nan):
             # grapping from sideway, can still edit pose
             self.set_pose(T_prep)
             self.pause(3)
@@ -191,6 +202,8 @@ class Rexarm():
         else:
             print("Sorry, I can't do this move.")
 
+        print "DONE this pose!!"
+
     def set_gripper_position(self, gripper_position, update_now = True):
         
         self.gripper_position = gripper_position
@@ -199,8 +212,8 @@ class Rexarm():
 
 
     def set_pose(self, pose, update_now = True):
-        joint_angles = IK(pose, self.DH_table)
-        print("Joint angles from IK: ", joint_angles)
+        joint_angles, isGOOD = IK(pose, self.DH_table)
+        # print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
 
         self.set_positions(joint_angles[0:6], update_now)

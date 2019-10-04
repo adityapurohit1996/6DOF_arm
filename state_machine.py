@@ -143,7 +143,7 @@ class StateMachine():
         i = 0
         #=====================================================================================================
         print("World Frame Clicked",world_frame)
-        world_frame[0:2,2] += z_offset
+        # world_frame[0:2,2] += z_offset
         homogeneous = np.transpose(np.ones((1,2)))
         coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
         
@@ -173,14 +173,17 @@ class StateMachine():
             #     self.rexarm.open_gripper()
 
             # self.rexarm.pause(1)
-            pose_of_block = [coordinates_global[i][0],coordinates_global[i][1],coordinates_global[i][2], theta[i][0]]
+
+            pose_of_block = [coordinates_global[i][0],coordinates_global[i][1],coordinates_global[i][2], theta[i]]
+            print "Point #", i
+            print(pose_of_block)
             self.rexarm.grab_or_place_block(pose_of_block, z_offset)
             
 
-        pose[2][3] = z_offset
-        print(pose)
+        # pose[2][3] = z_offset
+        # print(pose)
         self.rexarm.set_speeds_normalized_global(0.05,update_now=True)
-        self.rexarm.set_pose(pose)
+        # self.rexarm.set_pose(pose)
         self.rexarm.pause(2)
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
 
