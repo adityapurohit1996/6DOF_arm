@@ -159,6 +159,10 @@ class Gui(QMainWindow):
 
         self.ui.btnUser8.setText("Pick_N_Stack")
         self.ui.btnUser8.clicked.connect(partial(self.sm.set_next_state, "Pick_N_Stack"))
+
+        self.ui.btnUser7.setText("Line_M_Up")
+        self.ui.btnUser7.clicked.connect(partial(self.sm.set_next_state, "Line_M_Up"))
+        
         
 
 

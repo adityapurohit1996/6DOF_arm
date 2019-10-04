@@ -69,7 +69,11 @@ class StateMachine():
             if(self.next_state == "BlockSlider"):
                 self.BlockSlider(1)
             if(self.next_state == "Pick_N_Stack"):
-                self.Pick_N_Stack(3)
+                world_frame = self.clickCoordnates(3)
+                self.Pick_N_Stack(3,world_frame)
+            if(self.next_state == "Line_M_Up"):
+                world_frame = self.clickCoordnates(3)
+                self.Pick_N_Line_M_UpStack(3,world_frame)
 
                 
         if(self.current_state == "estop"):
@@ -114,6 +118,10 @@ class StateMachine():
                 self.idle()
 
         if(self.current_state == "Pick_N_Stack"):
+            if(self.next_state == "idle"):
+                self.idle()
+
+        if(self.current_state == "Line_M_Up"):
             if(self.next_state == "idle"):
                 self.idle()
         
@@ -200,35 +208,31 @@ class StateMachine():
         #Finished
         self.set_next_state("idle")
         self.rexarm.get_feedback()
+
+    def Line_M_Up(self,numBlocks,world_frame):
+        self.status_message = "State: Line_M_Up - Places or cubes in a line in a specific color pattern"
+        self.current_state = "Line_M_Up"
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.open_gripper()
+        #Motion Planning
+        lineCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100]])
+        #Finished
+        for joint in self.rexarm.joints:
+            joint.set_position(0.0)
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
     
-    def Pick_N_Stack(self,numBlocks):
+    def Pick_N_Stack(self,numBlocks,world_frame):
         self.status_message = "State: Pick_N_Stack - Stacks cubes in a specified location"
         self.current_state = "Pick_N_Stack"
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
         self.rexarm.open_gripper()
         #Motion Planning
-        world_frame = self.clickCoordnates(3)
         stack_location = np.array([-100,-100,self.Z0_offset])
         size = np.size(world_frame,0)
-        '''
-        new_plan = zeros((size*2,3))
-        j=1
-        for i in range(size)
-            new_plan[i] = world_frame[i]
-            new_plan[j] = stack_location
-            j+=2
-        world_frame = new_plan  
-        '''
         theta = np.array([0,0,0])
         height_stack = self.Z0_offset
         for i in range(size):
-            '''
-            print(height_stack)
-            print(world_frame)
-            print(world_frame[i])
-            print(stack_location)
-            print(np.stack((world_frame[i],stack_location)))
-            '''
             self.Grab_Place(np.stack((world_frame[i],stack_location)), theta, height_stack)
             height_stack = height_stack+self.stack_step
         #Finished
