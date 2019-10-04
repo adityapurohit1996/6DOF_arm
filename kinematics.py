@@ -97,41 +97,48 @@ def IK(pose, DH_table):
         r = Y0w/np.sin(theta1)    # theta1 might = 90
 
     # theta2, theta3 could be 2 set
-    # TODO check theta3 is reachable!!!!!
-    theta3 = np.arccos((Zd**2+r**2-a2**2-d4**2) / (2*a2*d4))
-    theta2 = np.arctan2(r, Zd) - np.arctan2(d4*np.sin(theta3), a2+d4*np.cos(theta3))
+    cos_theta3 = (Zd**2+r**2-a2**2-d4**2) / (2*a2*d4)
 
-    theta2 = clamp_if_close_to_angle(theta2)
-    theta3 = clamp_if_close_to_angle(theta3)
+    if(cos_theta3 <= 1):
+        REACHABLE = True
 
-    # 3. Find R0w 
-    joint_angles[0] = theta1
-    joint_angles[1] = theta2
-    joint_angles[2] = theta3
+        theta3 = np.arccos(cos_theta3)
+        theta2 = np.arctan2(r, Zd) - np.arctan2(d4*np.sin(theta3), a2+d4*np.cos(theta3))
 
-    T04 = np.identity(4)
+        theta2 = clamp_if_close_to_angle(theta2)
+        theta3 = clamp_if_close_to_angle(theta3)
 
-    for i in range(3):
-        DH = DH_table[i]
+        # 3. Find R0w 
+        joint_angles[0] = theta1
+        joint_angles[1] = theta2
+        joint_angles[2] = theta3
 
-        theta = np.radians(DH[0]) + joint_angles[i]
-        phi = np.radians(DH[3])
+        T04 = np.identity(4)
+
+        for i in range(3):
+            DH = DH_table[i]
+
+            theta = np.radians(DH[0]) + joint_angles[i]
+            phi = np.radians(DH[3])
+            
+            Ti = T_frrom_DH(theta, DH[1], DH[2], phi)
+            
+            T04 = np.dot(T04, Ti)
+
+        R0w = T04[0:3,0:3]
+
+        # 4. Find theta4, theta5, theta6
+        Rwt = np.dot(np.linalg.inv(R0w), R0t)
         
-        Ti = T_frrom_DH(theta, DH[1], DH[2], phi)
-        
-        T04 = np.dot(T04, Ti)
+        Twt = np.identity(4)
+        Twt[0:3,0:3] = Rwt
 
-    R0w = T04[0:3,0:3]
+        [joint_angles[3], joint_angles[4], joint_angles[5]] = get_euler_angles_from_T(Twt)
+    else:
+        REACHABLE = False
+        joint_angles[:] = np.nan
 
-    # 4. Find theta4, theta5, theta6
-    Rwt = np.dot(np.linalg.inv(R0w), R0t)
-    
-    Twt = np.identity(4)
-    Twt[0:3,0:3] = Rwt
-
-    [joint_angles[3], joint_angles[4], joint_angles[5]] = get_euler_angles_from_T(Twt)
-
-    return joint_angles
+    return joint_angles, REACHABLE
 
 def clamp_if_close_to_angle(theta, angle=0):
     angle_resolution = 1e-3
@@ -154,14 +161,14 @@ def get_euler_angles_from_T(T):
     
     if(abs(r33-1)<=0.1 or abs(r33-1)<=0.1):
         theta = 0
-        phi = np.arctan2(R[1,0], R[0,0])
-        psi = 0
+        phi = np.arctan2(R[1,0], R[0,0])/2
+        psi = phi
     else:
         # ***** Need to choose positive or negative
         theta = np.arctan2(np.sqrt(1-r33**2), r33)
 
-        psi = np.arctan2(R[2,1],-R[2,0])
-        phi = np.arctan2(R[1,2],R[0,2])
+        psi = np.arctan2(R[2,1]/np.sin(theta), -R[2,0]/np.sin(theta))
+        phi = np.arctan2(R[1,2]/np.sin(theta), R[0,2]/np.sin(theta))
 
     phi = clamp_if_close_to_angle(phi)
     theta = clamp_if_close_to_angle(theta)
@@ -227,28 +234,45 @@ def test():
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
                         [0, 0, 0, 90],
-                        [-90, 130.62, 0, 0]])
+                        [0, 130.62, 0, 0]])
 
-    th1 = 180
-    th2 = 45
-    th3 = -90
-    th4 = -90
-    th5 = 90
-    thetas = np.array([th1, th2, th3, th4, th5])
-    joint_angles = np.radians(thetas)
-
-    T_FK = FK_dh(joint_angles, DH_table)
-    IK_angle = IK(T_FK, DH_table)
-    T_IK = FK_dh(IK_angle, DH_table)
-
-
-    print("IK: ", np.rad2deg(IK_angle))
-    print("Difference of Joint angels: ", thetas - np.rad2deg(IK_angle[0:5]))
-    # print("T from FK: ", T_FK)
-    print("T from FK - IK: ", T_FK - T_IK)
-    print("Distance of End-effecter: ", T_FK[0:3,3] - T_IK[0:3,3])
-    print("Difference of Tool angles: ", (get_euler_angles_from_T(T_FK) - get_euler_angles_from_T(T_IK))*180/np.pi)
+    DH_FK = np.array([[0, 74.76+40.64, 0, -90],
+                        [-90, 0, 99.58, 0],
+                        [90, 0, 0, 90],
+                        [0, 110.46, 0, -90],
+                        [0, 0, 0, 90],
+                        [0, 150, 0, 0]])
     
+    th1 = 0
+    th2 = 90
+    th3 = 0
+    th4 = 0
+    th5 = 0
+    th6 = 0
+    thetas = np.array([th1, th2, th3, th4, th5, th6])
+    joint_angles = np.radians(thetas)
+    
+    T_FK = FK_dh(joint_angles, DH_FK)
+    # T_FK = FK_dh(joint_angles, DH_table)
+    
+    IK_angle, REACHABLE = IK(T_FK, DH_table)
+    
+    print("T_FK: ", T_FK)
+    print("REACHABLE: ", REACHABLE)
+    print("IK_angle: ", IK_angle)
+
+    if REACHABLE is True:
+        T_IK = FK_dh(IK_angle, DH_table)
+
+
+        print("IK: ", np.rad2deg(IK_angle))
+        print("Difference of Joint angels: ", thetas - np.rad2deg(IK_angle[0:6]))
+        # print("T from FK: ", T_FK)
+        print("T from FK - IK: ", T_FK - T_IK)
+        print("Distance of End-effecter: ", T_FK[0:3,3] - T_IK[0:3,3])
+        print("Difference of Tool angles: ", (get_euler_angles_from_T(T_FK) - get_euler_angles_from_T(T_IK))*180/np.pi)
+    else:
+        print("GG")
 
  
 if __name__ == '__main__':

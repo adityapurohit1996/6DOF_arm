@@ -92,7 +92,31 @@ class Rexarm():
             if(update_now):
                 joint.set_position(joint_angles[i])
 
-    def set_pose(self, pose, update_now = True):
+    def check_fesible_IK(self, pose_of_block, desire_mode = "from_top"):
+        X, Y, theta = pose_of_block
+        delta_Z = 
+        
+        T = np.identity(4)
+
+        if desire_mode == "from_top":
+            T[0:3,0:3] = np.array([[-np.cos(theta), -np.sin(theta), 0],
+                                    [np.sin(theta), -np.cos(theta), 0],
+                                    [0, 0, -1]])
+            T[0,3] = X
+            T[0,3] = Y
+
+        IK_angle, REACHABLE = IK(T_FK, DH_table)
+
+        if REACHABLE:
+            OK_pose = pose
+            isGood = True
+        else:
+
+
+
+        return OK_pose, isGood
+
+    def set_pose(self, pose_of_block, update_now = True):
         joint_angles = IK(pose, self.DH_table)
         print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
