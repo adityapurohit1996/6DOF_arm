@@ -16,6 +16,9 @@ class StateMachine():
         self.status_message = "State: Idle"
         self.current_state = "idle"
         self.next_state = "idle"
+        self.Z0_offset = 13 #mm
+        self.stack_step = 40 #mm
+        self.z_offset = 60 #mm
         
 
         self.IK_target = self.rexarm.get_positions
@@ -60,13 +63,13 @@ class StateMachine():
             if(self.next_state == "Grab_Place"):
                 theta = np.array([[0, 0, 0],[0, 0, 0]])
                 theta = np.deg2rad(theta)
-                z_offset = 60 #mm
                 world_frame = self.clickCoordnates(2)
-                self.Grab_Place(world_frame,theta,z_offset)
+                z = self.Z0_offset #mm 
+                self.Grab_Place(world_frame,theta,z)
             if(self.next_state == "BlockSlider"):
                 self.BlockSlider(1)
             if(self.next_state == "Pick_N_Stack"):
-                self.Pick_N_Stack()
+                self.Pick_N_Stack(3)
 
                 
         if(self.current_state == "estop"):
@@ -134,11 +137,10 @@ class StateMachine():
         world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
         #To convert depth to IK convention
         world_frame[2] = -world_frame[2] + 939
-
         return world_frame
 
-    def constructPose(self,z_offset,world_frame,theta):
-        world_frame[2] += z_offset
+    def constructPose(self,world_frame,theta,z):
+        world_frame[2] += z
         #homogeneous = np.transpose(np.ones((1,1)))
         #coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
         coordinates_global = np.append(world_frame,1)
@@ -150,7 +152,8 @@ class StateMachine():
         return pose
     
     def clickCoordnates(self,numPoints):
-        world_frame = np.zeros((2,3))
+        world_frame = np.zeros((numPoints,3))
+        cube_click_points = np.zeros((numPoints,2),int)
         #Get the World Coordinates of the pick up and drop off from mouse clicks============================
         i = 0
         for j in range(numPoints):
@@ -158,7 +161,7 @@ class StateMachine():
             while (i <= j):
                 #self.rexarm.get_feedback()
                 if(self.kinect.new_click == True):
-                    self.kinect.cube_click_points[i] = self.kinect.last_click.copy()
+                    cube_click_points[i] = self.kinect.last_click.copy()
                     i = i + 1
                     self.kinect.new_click = False  
                 world_frame[j] = self.rgb2world()     
@@ -172,19 +175,20 @@ class StateMachine():
         self.rexarm.open_gripper()
         #Motion Planning
         slidingCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100]])
-        pose = self.constructPose(60,np.append(slidingCoordinates[0],0),np.array([0,0,0]))
+        pose = self.constructPose(np.append(slidingCoordinates[0],0),np.array([0,0,0]),self.z_offset)
         #print(pose)
         self.rexarm.set_pose(pose)
         self.rexarm.pause(4)
         if(stack):
             pose[2][3] = 20
         else:
-            pose[2][3] = 13
+            pose[2][3] = self.Z0_offset
 
         #print(pose)
         self.rexarm.set_pose(pose)
         self.rexarm.pause(3)
         self.rexarm.close_gripper()
+        self.rexarm.pause(2)
         size = np.size(slidingCoordinates,0)
         for i in range(size-1):
             pose[0:2,3] = slidingCoordinates[i+1]
@@ -197,11 +201,44 @@ class StateMachine():
         self.set_next_state("idle")
         self.rexarm.get_feedback()
     
-    def Pick_N_Stack(self):
-        world_frame = self.clickCoordnates(2)
+    def Pick_N_Stack(self,numBlocks):
+        self.status_message = "State: Pick_N_Stack - Stacks cubes in a specified location"
+        self.current_state = "Pick_N_Stack"
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.open_gripper()
+        #Motion Planning
+        world_frame = self.clickCoordnates(3)
+        stack_location = np.array([-100,-100,self.Z0_offset])
+        size = np.size(world_frame,0)
+        '''
+        new_plan = zeros((size*2,3))
+        j=1
+        for i in range(size)
+            new_plan[i] = world_frame[i]
+            new_plan[j] = stack_location
+            j+=2
+        world_frame = new_plan  
+        '''
+        theta = np.array([0,0,0])
+        height_stack = self.Z0_offset
+        for i in range(size):
+            '''
+            print(height_stack)
+            print(world_frame)
+            print(world_frame[i])
+            print(stack_location)
+            print(np.stack((world_frame[i],stack_location)))
+            '''
+            self.Grab_Place(np.stack((world_frame[i],stack_location)), theta, height_stack)
+            height_stack = height_stack+self.stack_step
+        #Finished
+        for joint in self.rexarm.joints:
+            joint.set_position(0.0)
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
         
 
-    def Grab_Place(self,world_frame, theta, z_offset):
+    def Grab_Place(self,world_frame, theta, z):
         self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
         self.current_state = "Grab_Place"
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
@@ -209,16 +246,19 @@ class StateMachine():
         
         #Motion Planning
         size = np.size(world_frame,0)
-
         for i in range(size):
-            pose = self.constructPose(z_offset,world_frame[i],np.array([0,0,0]))
+            pose = self.constructPose(world_frame[i],np.array([0,0,0]),self.z_offset)
+            print(pose)
             self.rexarm.set_pose(pose)
             self.rexarm.pause(4)
-            pose[2][3] = 13
+            if (i % 2) == 0 | i==0:
+                pose[2][3] = self.Z0_offset
+            else:
+                pose[2][3] = z
             #print(pose)
             self.rexarm.set_pose(pose)
             self.rexarm.pause(3)
-            if i==0:
+            if (i % 2) == 0 | i==0:
                 self.rexarm.close_gripper()
             else: 
                 print("Made it")
@@ -226,8 +266,8 @@ class StateMachine():
 
             self.rexarm.pause(1)
 
-        pose[2][3] = z_offset
-        print(pose)
+        #Slowly move gripper above cube and then back to zero joint positions
+        pose[2][3] = self.z_offset
         self.rexarm.set_speeds_normalized_global(0.05,update_now=True)
         self.rexarm.set_pose(pose)
         self.rexarm.pause(2)
