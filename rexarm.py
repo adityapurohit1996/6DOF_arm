@@ -33,14 +33,14 @@ class Rexarm():
                             [-110+safety_margim, 100-safety_margim],
                             [-180+safety_margim, 179.99-safety_margim],
                             [-125+safety_margim, 120-safety_margim],
-                            [-60+safety_margim, 60-safety_margim],
-                            [-60+safety_margim, 60-safety_margim],], dtype=np.float)*D2R
+                            [-60+safety_margim, 60-safety_margim]], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
         self.position = [0.0] * self.num_joints     # degrees
         self.speed = [1.0] * self.num_joints        # 0 to 1
         self.max_torque = [1.0] * self.num_joints   # 0 to 1
+        self.gripper_position = 0.0
 
         """ Feedback Values """
         self.joint_angles_fb = [0.0] * self.num_joints # degrees
@@ -64,18 +64,23 @@ class Rexarm():
             joint.set_torque_limit(0.5)
             joint.set_speed(0.25)
         if(self.gripper != 0):
+            print("initialize!!")
+            self.gripper.enable_torque()
+            self.gripper.set_position(self.gripper_open_pos)
             self.gripper.set_torque_limit(1.0)
             self.gripper.set_speed(0.8)
-            self.close_gripper()
+            #self.close_gripper()
 
     def open_gripper(self):
         """ TODO """
         self.gripper_state = False
+        self.gripper.set_position(self.gripper_open_pos)
         pass
 
     def close_gripper(self):
         """ TODO """
         self.gripper_state = True
+        self.gripper.set_position(self.gripper_closed_pos)
         pass
 
     def toggle_gripper(self):
@@ -87,36 +92,76 @@ class Rexarm():
         print(joint_angles)
         for i,joint in enumerate(self.joints):
             #print(i)
+            #print(joint)
             #print(joint_angles[i])
             self.position[i] = joint_angles[i]
             if(update_now):
                 joint.set_position(joint_angles[i])
 
-    def check_fesible_IK(self, pose_of_block, desire_mode = "from_top"):
-        X, Y, theta = pose_of_block
-        delta_Z = 
+    def check_fesible_IK(self, pose_of_block, delta_Z, desire_mode = "GRAB_FROM_TOP"):
+        X, Y, Z, theta = pose_of_block
+        delta_Z = 60
         
-        T = np.identity(4)
+        T_ori = np.identity(4)
+        REACHABLE = False
 
-        if desire_mode == "from_top":
-            T[0:3,0:3] = np.array([[-np.cos(theta), -np.sin(theta), 0],
+        if(desire_mode == "GRAB_FROM_TOP"):
+            T_ori[0:3,0:3] = np.array([[-np.cos(theta), -np.sin(theta), 0],
                                     [np.sin(theta), -np.cos(theta), 0],
                                     [0, 0, -1]])
-            T[0,3] = X
-            T[0,3] = Y
+            T_ori[0,3] = X
+            T_ori[1,3] = Y
+            T_ori[2,3] = Z + delta_Z
 
-        IK_angle, REACHABLE = IK(T_FK, DH_table)
+            IK_angle, REACHABLE = IK(T_ori, self.DH_table)
 
-        if REACHABLE:
-            OK_pose = pose
-            isGood = True
-        else:
+            if REACHABLE:
+                OK_pose = T_ori
+                isGood = True
 
-
+        if(~REACHABLE):
+            if(X >= 0):
+                if(Y >= 0):
+                    T = rotation(theta, "z")*rotation(np.pi/2, "y")
+                    T[0,3] = X - delta_Z*np.cos(theta)
+                    T[1,3] = Y - delta_Z*np.sin(theta)
+                    T[2,3] = Z
+                else:
+                    T = rotation(theta-np.pi/2, "z")*rotation(np.pi/2, "y")
+                    T[0,3] = X - delta_Z*np.sin(theta-np.pi/2)
+                    T[1,3] = Y - delta_Z*np.cos(theta-np.pi/2)
+                    T[2,3] = Z
+            else:
+                if(Y >= 0):
+                    T = rotation(theta+np.pi/2, "z")*rotation(np.pi/2, "y")
+                    T[0,3] = X - delta_Z*np.cos(theta+np.pi/2)
+                    T[1,3] = Y - delta_Z*np.sin(theta+np.pi/2)
+                    T[2,3] = Z
+                else:
+                    T = rotation(theta+np.pi, "z")*rotation(np.pi/2, "y")
+                    T[0,3] = X - delta_Z*np.sin(theta+np.pi)
+                    T[1,3] = Y - delta_Z*np.cos(theta+np.pi)
+                    T[2,3] = Z
+            IK_angle = REACHABLE = IK(T, self.DH_table)
+            
+            if REACHABLE:
+                OK_pose = T_ori
+                isGood = True
+            else:
+                T[:] = np.nan
+                OK_pose = T
+                isGood = False
 
         return OK_pose, isGood
 
-    def set_pose(self, pose_of_block, update_now = True):
+    def set_gripper_position(self, gripper_position, update_now = True):
+        
+        self.gripper_position = gripper_position
+        if(update_now):
+            self.gripper.set_position(gripper_position)
+
+
+    def set_pose(self, pose, update_now = True):
         joint_angles = IK(pose, self.DH_table)
         print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
@@ -154,6 +199,7 @@ class Rexarm():
         self.set_positions(self.position)
         self.set_speeds_normalized(self.speed)
         self.set_torque_limits(self.max_torque)
+        self.gripper.set_position(self.gripper_position)
 
     def enable_torque(self):
         for joint in self.joints:
