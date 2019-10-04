@@ -61,9 +61,12 @@ class StateMachine():
                 theta = np.array([[0, 0, 0],[0, 0, 0]])
                 theta = np.deg2rad(theta)
                 z_offset = 60 #mm
-                self.Grab_Place(theta,z_offset)
+                world_frame = self.clickCoordnates(2)
+                self.Grab_Place(world_frame,theta,z_offset)
             if(self.next_state == "BlockSlider"):
                 self.BlockSlider(1)
+            if(self.next_state == "Pick_N_Stack"):
+                self.Pick_N_Stack()
 
                 
         if(self.current_state == "estop"):
@@ -106,6 +109,10 @@ class StateMachine():
         if(self.current_state == "BlockSlider"):
             if(self.next_state == "idle"):
                 self.idle()
+
+        if(self.current_state == "Pick_N_Stack"):
+            if(self.next_state == "idle"):
+                self.idle()
         
                 
                
@@ -129,9 +136,8 @@ class StateMachine():
         world_frame[2] = -world_frame[2] + 939
 
         return world_frame
+
     def constructPose(self,z_offset,world_frame,theta):
-        print(world_frame)
-        print(world_frame[2])
         world_frame[2] += z_offset
         #homogeneous = np.transpose(np.ones((1,1)))
         #coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
@@ -142,6 +148,22 @@ class StateMachine():
         pose[0:4,0:4]=orientation_gripper
         pose[:,3] = np.transpose(coordinates_global)
         return pose
+    
+    def clickCoordnates(self,numPoints):
+        world_frame = np.zeros((2,3))
+        #Get the World Coordinates of the pick up and drop off from mouse clicks============================
+        i = 0
+        for j in range(numPoints):
+            self.status_message = "Click the current location of cube and location the cube should be placed"
+            while (i <= j):
+                #self.rexarm.get_feedback()
+                if(self.kinect.new_click == True):
+                    self.kinect.cube_click_points[i] = self.kinect.last_click.copy()
+                    i = i + 1
+                    self.kinect.new_click = False  
+                world_frame[j] = self.rgb2world()     
+        i = 0
+        return world_frame  
 
     def BlockSlider(self,stack):
         self.status_message = "State: BlockSlider - Completes Event in Competition"
@@ -170,40 +192,26 @@ class StateMachine():
             self.rexarm.pause(3)
             #print(pose)
         self.rexarm.open_gripper()
-        # #self.rexarm.pause(1)
+        #self.rexarm.pause(1)
+        #Finished
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+    
+    def Pick_N_Stack(self):
+        world_frame = self.clickCoordnates(2)
+        
 
-    def Grab_Place(self, theta, z_offset):
+    def Grab_Place(self,world_frame, theta, z_offset):
         self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
         self.current_state = "Grab_Place"
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
         self.rexarm.open_gripper()
-        world_frame = np.zeros((2,3))
-        #Get the World Coordinates of the pick up and drop off from mouse clicks============================
-        i = 0
-        for j in range(2):
-            self.status_message = "Click the current location of cube and location the cube should be placed"
-            while (i <= j):
-                #self.rexarm.get_feedback()
-                if(self.kinect.new_click == True):
-                    self.kinect.cube_click_points[i] = self.kinect.last_click.copy()
-                    i = i + 1
-                    self.kinect.new_click = False  
-                world_frame[j] = self.rgb2world()     
-        i = 0
-        #=====================================================================================================
-        world_frame[0:2,2] += z_offset
-        homogeneous = np.transpose(np.ones((1,2)))
-        coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
-        orientation_gripper = np.zeros((4,4))
-        pose = np.zeros((4,4))
-        size = np.size(coordinates_global,0)
+        
+        #Motion Planning
+        size = np.size(world_frame,0)
 
         for i in range(size):
-            orientation_gripper = np.dot(np.dot(-1*rotation(theta[i][0],'z'),rotation(theta[i][1],'y')),rotation(theta[i][2],'z'))
-            print("actual",orientation_gripper)
-            pose[0:4,0:4]=orientation_gripper
-            pose[:,3] = np.transpose(coordinates_global[i])
-            print(pose)
+            pose = self.constructPose(z_offset,world_frame[i],np.array([0,0,0]))
             self.rexarm.set_pose(pose)
             self.rexarm.pause(4)
             pose[2][3] = 13
@@ -212,7 +220,6 @@ class StateMachine():
             self.rexarm.pause(3)
             if i==0:
                 self.rexarm.close_gripper()
-
             else: 
                 print("Made it")
                 self.rexarm.open_gripper()
@@ -225,14 +232,12 @@ class StateMachine():
         self.rexarm.set_pose(pose)
         self.rexarm.pause(2)
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
-
+        #Finished
         for joint in self.rexarm.joints:
             joint.set_position(0.0)
         self.set_next_state("idle")
         self.rexarm.get_feedback()
         
-
-    
 
     def IK_set_pose(self):
         self.status_message = "State: IK_set_pose - setting pose for IK test"

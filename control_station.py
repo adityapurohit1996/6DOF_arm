@@ -156,6 +156,9 @@ class Gui(QMainWindow):
 
         self.ui.btnUser9.setText("BlockSlider")
         self.ui.btnUser9.clicked.connect(partial(self.sm.set_next_state, "BlockSlider"))
+
+        self.ui.btnUser8.setText("Pick_N_Stack")
+        self.ui.btnUser8.clicked.connect(partial(self.sm.set_next_state, "Pick_N_Stack"))
         
 
 
