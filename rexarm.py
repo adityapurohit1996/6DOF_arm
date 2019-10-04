@@ -33,7 +33,7 @@ class Rexarm():
                             [-110+safety_margim, 100-safety_margim],
                             [-180+safety_margim, 179.99-safety_margim],
                             [-125+safety_margim, 120-safety_margim],
-                            [-60+safety_margim, 60-safety_margim]], dtype=np.float)*D2R
+                            [-100+safety_margim, 100-safety_margim]], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
@@ -126,14 +126,14 @@ class Rexarm():
             T_prep[2,3] = Z+delta_Z
             _, REACHABLE_above = IK(T_prep, self.DH_table)
 
-            print "From TOP:"
-            print "grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above
+            print("From TOP:")
+            print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above)
 
             if REACHABLE_grab and REACHABLE_above:
                 grap_pose = T_grab
                 prep_pose = T_prep
                 isTOP = True
-        print "isTOP: ", isTOP
+        print("isTOP: ", isTOP)
 
         if(not isTOP):
             if(X >= 0):
@@ -150,7 +150,7 @@ class Rexarm():
             T_grab = np.dot(rotation(theta, "z"), rotation(np.pi/2, "y"))
             T_grab[0,3] = X
             T_grab[1,3] = Y
-            T_grab[2,3] = Z
+            T_grab[2,3] = Z+20
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
 
             T_prep = np.copy(T_grab)
@@ -158,8 +158,8 @@ class Rexarm():
             T_prep[1,3] = Y - delta_Z*np.sin(theta)
             _, REACHABLE_side = IK(T_grab, self.DH_table)
 
-            print "From Horizon:"
-            print "grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above
+            print("From Horizon:")
+            print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above)
                 
             if REACHABLE_grab and REACHABLE_side:
                 grap_pose = T_grab
@@ -202,7 +202,7 @@ class Rexarm():
         else:
             print("Sorry, I can't do this move.")
 
-        print "DONE this pose!!"
+        print("DONE this pose!!")
 
     def set_gripper_position(self, gripper_position, update_now = True):
         
@@ -213,7 +213,7 @@ class Rexarm():
 
     def set_pose(self, pose, update_now = True):
         joint_angles, isGOOD = IK(pose, self.DH_table)
-        # print("Joint angles from IK: ", joint_angles)
+        print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
 
         self.set_positions(joint_angles[0:6], update_now)

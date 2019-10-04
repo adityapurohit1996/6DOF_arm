@@ -175,7 +175,7 @@ class StateMachine():
             # self.rexarm.pause(1)
 
             pose_of_block = [coordinates_global[i][0],coordinates_global[i][1],coordinates_global[i][2], theta[i]]
-            print "Point #", i
+            print("Point #", i)
             print(pose_of_block)
             self.rexarm.grab_or_place_block(pose_of_block, z_offset)
             
