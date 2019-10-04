@@ -154,25 +154,28 @@ class StateMachine():
         size = np.size(coordinates_global,0)
 
         for i in range(size):
-            orientation_gripper = np.dot(np.dot(-1*rotation(theta[i][0],'z'),rotation(theta[i][1],'y')),rotation(theta[i][2],'z'))
-            print("actual",orientation_gripper)
-            pose[0:4,0:4]=orientation_gripper
-            pose[:,3] = np.transpose(coordinates_global[i])
-            print(pose)
-            self.rexarm.set_pose(pose)
-            self.rexarm.pause(4)
-            pose[2][3] = 13
-            #print(pose)
-            self.rexarm.set_pose(pose)
-            self.rexarm.pause(3)
-            if i==0:
-                self.rexarm.close_gripper()
+            # orientation_gripper = np.dot(np.dot(-1*rotation(theta[i][0],'z'),rotation(theta[i][1],'y')),rotation(theta[i][2],'z'))
+            # print("actual",orientation_gripper)
+            # pose[0:4,0:4]=orientation_gripper
+            # pose[:,3] = np.transpose(coordinates_global[i])
+            # print(pose)
+            # self.rexarm.set_pose(pose)
+            # self.rexarm.pause(4)
+            # pose[2][3] = 13
+            # #print(pose)
+            # self.rexarm.set_pose(pose)
+            # self.rexarm.pause(3)
+            # if i==0:
+            #     self.rexarm.close_gripper()
 
-            else: 
-                print("Made it")
-                self.rexarm.open_gripper()
+            # else: 
+            #     print("Made it")
+            #     self.rexarm.open_gripper()
 
-            self.rexarm.pause(1)
+            # self.rexarm.pause(1)
+            pose_of_block = [coordinates_global[i][0],coordinates_global[i][1],coordinates_global[i][2], theta[i][0]]
+            self.rexarm.grab_or_place_block(pose_of_block, z_offset)
+            
 
         pose[2][3] = z_offset
         print(pose)

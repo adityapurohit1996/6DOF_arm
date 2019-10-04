@@ -85,6 +85,12 @@ class Rexarm():
 
     def toggle_gripper(self):
         """ TODO """
+        if(self.gripper_state is True):
+            self.gripper_state = False
+            self.gripper.set_position(self.gripper_open_pos)
+        else:
+            self.gripper_state = True
+            self.gripper.set_position(self.gripper_closed_pos)
         pass
 
     def set_positions(self, joint_angles, update_now = True):
@@ -100,59 +106,90 @@ class Rexarm():
 
     def check_fesible_IK(self, pose_of_block, delta_Z, desire_mode = "GRAB_FROM_TOP"):
         X, Y, Z, theta = pose_of_block
-        delta_Z = 60
-        
-        T_ori = np.identity(4)
-        REACHABLE = False
+        theta = theta[0] # only use first z in zyz (right now)
+
+        T_grab = np.identity(4)
+        isTOP = False
 
         if(desire_mode == "GRAB_FROM_TOP"):
             T_ori[0:3,0:3] = np.array([[-np.cos(theta), -np.sin(theta), 0],
                                     [np.sin(theta), -np.cos(theta), 0],
                                     [0, 0, -1]])
-            T_ori[0,3] = X
-            T_ori[1,3] = Y
-            T_ori[2,3] = Z + delta_Z
+            
+            # checking if can grab from top
+            T_grab[0,3] = X
+            T_grab[1,3] = Y
+            T_grab[2,3] = Z
+            _, REACHABLE_grab = IK(T_grab, self.DH_table)
+            
+            T_prep = np.copy(T_grab)
+            T_prep[2,3] = Z+delta_Z
+            _, REACHABLE_above = IK(T_prep, self.DH_table)
 
-            IK_angle, REACHABLE = IK(T_ori, self.DH_table)
+            if REACHABLE_grab and REACHABLE_above:
+                grap_pose = T_grab
+                prep_pose = T_prepp
+                isTOP = True
 
-            if REACHABLE:
-                OK_pose = T_ori
-                isGood = True
-
-        if(~REACHABLE):
+        if(~isTOP):
             if(X >= 0):
                 if(Y >= 0):
-                    T = rotation(theta, "z")*rotation(np.pi/2, "y")
-                    T[0,3] = X - delta_Z*np.cos(theta)
-                    T[1,3] = Y - delta_Z*np.sin(theta)
-                    T[2,3] = Z
-                else:
-                    T = rotation(theta-np.pi/2, "z")*rotation(np.pi/2, "y")
-                    T[0,3] = X - delta_Z*np.sin(theta-np.pi/2)
-                    T[1,3] = Y - delta_Z*np.cos(theta-np.pi/2)
-                    T[2,3] = Z
+                    theta = theta
+                   else:
+                    theta = theta - np.pi/2
             else:
                 if(Y >= 0):
-                    T = rotation(theta+np.pi/2, "z")*rotation(np.pi/2, "y")
-                    T[0,3] = X - delta_Z*np.cos(theta+np.pi/2)
-                    T[1,3] = Y - delta_Z*np.sin(theta+np.pi/2)
-                    T[2,3] = Z
+                    theta = theta + np.pi/2
                 else:
-                    T = rotation(theta+np.pi, "z")*rotation(np.pi/2, "y")
-                    T[0,3] = X - delta_Z*np.sin(theta+np.pi)
-                    T[1,3] = Y - delta_Z*np.cos(theta+np.pi)
-                    T[2,3] = Z
-            IK_angle = REACHABLE = IK(T, self.DH_table)
-            
-            if REACHABLE:
-                OK_pose = T_ori
-                isGood = True
-            else:
-                T[:] = np.nan
-                OK_pose = T
-                isGood = False
+                    theta = theta + np.pi
 
-        return OK_pose, isGood
+            T_grab = np.dot(rotation(theta, "z"), rotation(np.pi/2, "y"))
+            T_grab[0,3] = X
+            T_grab[1,3] = Y
+            T_grab[2,3] = Z
+            _, REACHABLE_grab = IK(T_grab, self.DH_table)
+
+            T_prep = np.copy(T_grab)
+            T_grab[0,3] = X - delta_Z*np.cos(theta)
+            T_grab[1,3] = Y - delta_Z*np.sin(theta)
+            _, REACHABLE_side = IK(T_grab, self.DH_table)
+                
+            if REACHABLE_grab and REACHABLE_side:
+                grap_pose = T_grab
+                prep_pose = T_prepp
+            else:
+                T_grab[:] = np.nan
+                T_prep[:] = np.nan
+
+        return T_grab, T_prep, isTOP
+
+    def grab_or_place_block(self, pose_of_block, offset, desire_mode = "GRAB_FROM_TOP"):
+        '''
+        pose_of_block: X, Y, Z, theta(z-axis)
+        '''
+        T_grab, T_prep, isTOP = self.check_fesible_IK(pose_of_block,offset)
+        
+        if(isTOP):
+            self.set_pose(T_prep)
+            self.pause(3)
+            self.set_pose(T_grab)
+            self.pause(3)
+            self.toggle_gripper()
+            self.pause(1)
+            self.set_pose(T_prep)
+            self.pause(3)
+        if(T_grab[0] ~= np.nan):
+            # grapping from sideway, can still edit pose
+            self.set_pose(T_prep)
+            self.pause(3)
+            self.set_pose(T_grab)
+            self.pause(3)
+            self.toggle_gripper()
+            self.pause(1)
+            self.set_pose(T_prep)
+            self.pause(3)
+        else:
+            print("Sorry, I can't do this move.")
 
     def set_gripper_position(self, gripper_position, update_now = True):
         
