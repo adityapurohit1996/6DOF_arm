@@ -153,6 +153,9 @@ class Gui(QMainWindow):
         
         self.ui.btnUser10.setText("Grab_Place")
         self.ui.btnUser10.clicked.connect(partial(self.sm.set_next_state, "Grab_Place"))
+
+        self.ui.btnUser9.setText("BlockSlider")
+        self.ui.btnUser9.clicked.connect(partial(self.sm.set_next_state, "BlockSlider"))
         
 
 

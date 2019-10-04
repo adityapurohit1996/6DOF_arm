@@ -62,6 +62,8 @@ class StateMachine():
                 theta = np.deg2rad(theta)
                 z_offset = 60 #mm
                 self.Grab_Place(theta,z_offset)
+            if(self.next_state == "BlockSlider"):
+                self.BlockSlider(1)
 
                 
         if(self.current_state == "estop"):
@@ -100,6 +102,11 @@ class StateMachine():
         if(self.current_state == "Grab_Place"):
             if(self.next_state == "idle"):
                 self.idle()
+        
+        if(self.current_state == "BlockSlider"):
+            if(self.next_state == "idle"):
+                self.idle()
+        
                 
                
 
@@ -122,6 +129,48 @@ class StateMachine():
         world_frame[2] = -world_frame[2] + 939
 
         return world_frame
+    def constructPose(self,z_offset,world_frame,theta):
+        print(world_frame)
+        print(world_frame[2])
+        world_frame[2] += z_offset
+        #homogeneous = np.transpose(np.ones((1,1)))
+        #coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
+        coordinates_global = np.append(world_frame,1)
+        orientation_gripper = np.zeros((4,4))
+        pose = np.zeros((4,4))
+        orientation_gripper = np.dot(np.dot(-1*rotation(theta[0],'z'),rotation(theta[1],'y')),rotation(theta[2],'z'))
+        pose[0:4,0:4]=orientation_gripper
+        pose[:,3] = np.transpose(coordinates_global)
+        return pose
+
+    def BlockSlider(self,stack):
+        self.status_message = "State: BlockSlider - Completes Event in Competition"
+        self.current_state = "Grab_Place"
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.open_gripper()
+        #Motion Planning
+        slidingCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100]])
+        pose = self.constructPose(60,np.append(slidingCoordinates[0],0),np.array([0,0,0]))
+        #print(pose)
+        self.rexarm.set_pose(pose)
+        self.rexarm.pause(4)
+        if(stack):
+            pose[2][3] = 20
+        else:
+            pose[2][3] = 13
+
+        #print(pose)
+        self.rexarm.set_pose(pose)
+        self.rexarm.pause(3)
+        self.rexarm.close_gripper()
+        size = np.size(slidingCoordinates,0)
+        for i in range(size-1):
+            pose[0:2,3] = slidingCoordinates[i+1]
+            self.rexarm.set_pose(pose)
+            self.rexarm.pause(3)
+            #print(pose)
+        self.rexarm.open_gripper()
+        # #self.rexarm.pause(1)
 
     def Grab_Place(self, theta, z_offset):
         self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
@@ -142,13 +191,9 @@ class StateMachine():
                 world_frame[j] = self.rgb2world()     
         i = 0
         #=====================================================================================================
-        print("World Frame Clicked",world_frame)
         world_frame[0:2,2] += z_offset
         homogeneous = np.transpose(np.ones((1,2)))
         coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
-        
-        #orientation_gripper_test = -1*rotation(theta[0][0],'z')
-        #print("test",orientation_gripper_test)
         orientation_gripper = np.zeros((4,4))
         pose = np.zeros((4,4))
         size = np.size(coordinates_global,0)
