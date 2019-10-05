@@ -28,6 +28,7 @@ class Kinect():
 
         """ Extra arrays for colormaping the depth image"""
         self.DepthHSV = np.zeros((480,640,3)).astype(np.uint8)
+        self.Contour_IC = list()
         self.DepthCM=np.array([])
 
         """ block info """
@@ -219,12 +220,11 @@ class Kinect():
 
       '''  
 
+    def DetectColor(self):
+        
+
+
     def detectBlocksInDepthImage(self):
-        """
-        TODO:
-        Implement a blob detector to find blocks
-        in the depth image
-        """
         I_depth = self.currentDepthFrame
         #print(I_depth.shape)
         ROI = np.zeros((I_depth.shape[0], I_depth.shape[1]),np.uint8)
@@ -275,7 +275,8 @@ class Kinect():
                 
 
                     cv2.drawContours(mask, contours, i, 255, -1)
-                    rects.append(rect)
+
+                    rects.append([x,y,1])
                 #masks.append(cv2.drawContours(mask, contours, i, 255, -1))
         #cv2.imshow('Depth', I_depth)
         
@@ -285,7 +286,7 @@ class Kinect():
         #cv2.imshow('mask 1', masks[0])
         #cv2.imshow('mask 2', masks[1])
         if rects :
-           print(rects)
+           self.Contour_IC = rects
 
 
         return mask
