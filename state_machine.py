@@ -174,6 +174,11 @@ class StateMachine():
                     self.kinect.new_click = False  
                 world_frame[j] = self.rgb2world()     
         i = 0
+        #=====================================================================================================
+        print("World Frame Clicked",world_frame)
+        # world_frame[0:2,2] += z_offset
+        homogeneous = np.transpose(np.ones((1,2)))
+        coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
         return world_frame  
 
     def BlockSlider(self,stack):
@@ -182,11 +187,24 @@ class StateMachine():
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
         self.rexarm.open_gripper()
         #Motion Planning
-        slidingCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100]])
-        pose = self.constructPose(np.append(slidingCoordinates[0],0),np.array([0,0,0]),self.z_offset)
+        slidingCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100],[-100, 100]])
+        #slidingCoordinates = np.array([[120, 100],[100, 100], [100, -100],[-100, -100]])
+
+        pose = self.constructPose(np.append(slidingCoordinates[0],0),np.array([0,0,0]),self.z_offset - 50)
         #print(pose)
         self.rexarm.set_pose(pose)
-        self.rexarm.pause(4)
+        self.rexarm.pause(2)
+        self.rexarm.close_gripper()
+        self.rexarm.pause(2)
+        print("first pose: ", pose)
+        size = np.size(slidingCoordinates,0)
+        for i in range(size-1):
+            self.rexarm.interpolating_in_WS(pose[0:3,0:3], np.array(np.append(slidingCoordinates[i],5)), np.array(np.append(slidingCoordinates[i+1],5)), 5)
+            self.rexarm.pause(3)
+        self.rexarm.open_gripper()
+
+        
+        '''
         if(stack):
             pose[2][3] = 20
         else:
@@ -205,7 +223,10 @@ class StateMachine():
             #print(pose)
         self.rexarm.open_gripper()
         #self.rexarm.pause(1)
+        '''
         #Finished
+        for joint in self.rexarm.joints:
+            joint.set_position(0.0)
         self.set_next_state("idle")
         self.rexarm.get_feedback()
 
@@ -251,6 +272,12 @@ class StateMachine():
         #Motion Planning
         size = np.size(world_frame,0)
         for i in range(size):
+            
+            pose_of_block = [world_frame[i][0],world_frame[i][1],world_frame[i][2], theta[i]]
+            print("Point #", i)
+            print(pose_of_block)
+            self.rexarm.grab_or_place_block(pose_of_block, 40)
+            '''
             pose = self.constructPose(world_frame[i],np.array([0,0,0]),self.z_offset)
             print(pose)
             self.rexarm.set_pose(pose)
@@ -269,13 +296,15 @@ class StateMachine():
                 self.rexarm.open_gripper()
 
             self.rexarm.pause(1)
-
+            
         #Slowly move gripper above cube and then back to zero joint positions
         pose[2][3] = self.z_offset
         self.rexarm.set_speeds_normalized_global(0.05,update_now=True)
-        self.rexarm.set_pose(pose)
+        # self.rexarm.set_pose(pose)
         self.rexarm.pause(2)
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        '''
+
         #Finished
         for joint in self.rexarm.joints:
             joint.set_position(0.0)
@@ -411,6 +440,9 @@ class StateMachine():
                             "lower right corner of board",
                             "corner of the tape"]
         i = 0
+
+        self.kinect.depth2rgb_affine = np.float32([[1,0,0],[0,1,0]])
+
         for j in range(5):
             self.status_message = "Calibration - Click %s in RGB image" % location_strings[j]
             while (i <= j):
@@ -447,8 +479,7 @@ class StateMachine():
 
         #get the affine transform from depth image to affine image
         self.kinect.depth2rgb_affine = self.kinect.getAffineTransform(self.kinect.depth_click_points,self.kinect.rgb_click_points)
-        print(self.kinect.depth2rgb_affine)
-
+        np.savetxt("depth2rgb_affine.cfg", self.kinect.depth2rgb_affine)
         # Generate Camera coordinates from image coordinates
         for i,rgb in enumerate (self.kinect.rgb_click_points) :
             a = np.array([rgb[0],rgb[1],1])
@@ -466,7 +497,8 @@ class StateMachine():
 
         # Find the projection matrix between image and world coordinates
         self.kinect.projection =  np.dot(extrinsic_affine, inv_intrinsic_matrix)
-       
+        np.savetxt("projection.cfg", self.kinect.projection)
+
         self.kinect.kinectCalibrated = True
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)
