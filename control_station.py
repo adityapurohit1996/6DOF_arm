@@ -145,7 +145,6 @@ class Gui(QMainWindow):
 
         self.ui.btnUser5.setText("Detect blocks")
         self.ui.btnUser5.clicked.connect(partial(self.sm.set_next_state, "Detect Blocks"))
-
         self.ui.btnUser11.setText("IK_set_pose")
         self.ui.btnUser11.clicked.connect(partial(self.sm.set_next_state, "IK_set_pose"))
         self.ui.btnUser12.setText("IK_Test")
