@@ -31,9 +31,9 @@ class Rexarm():
                             [-180+safety_margim, 179.99-safety_margim],
                             [-25-90+safety_margim, 208-90-safety_margim],
                             [-110+safety_margim, 100-safety_margim],
-                            [-180+safety_margim, 179.99-safety_margim],
+                            [-150+safety_margim, 150-safety_margim],
                             [-125+safety_margim, 120-safety_margim],
-                            [-100+safety_margim, 100-safety_margim]], dtype=np.float)*D2R
+                            [-150+safety_margim, 150-safety_margim]], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
@@ -104,6 +104,26 @@ class Rexarm():
             if(update_now):
                 joint.set_position(joint_angles[i])
 
+    def interpolating_in_WS(self, orientation, pi, pf, density):
+        '''
+        density: mm/point
+        '''
+        num = max(abs(pf-pi))/density
+        
+        step = (1.0/num)*(pf-pi)
+        path = step[:,None]*np.arange(num) + pi[:,None]
+        path = np.transpose(path)
+
+        T = np.identity(4)
+        T[0:3,0:3] = orientation
+
+        for position in path:
+            print(position)
+            T[0:3,3] = position
+            print(T)
+            self.set_pose(T)
+            self.pause(0.2) 
+
     def check_fesible_IK(self, pose_of_block, delta_Z, desire_mode = "GRAB_FROM_TOP"):
         X, Y, Z, theta = pose_of_block
         theta = theta[0] # only use first z in zyz (right now)
@@ -150,7 +170,7 @@ class Rexarm():
             T_grab = np.dot(rotation(theta, "z"), rotation(np.pi/2, "y"))
             T_grab[0,3] = X
             T_grab[1,3] = Y
-            T_grab[2,3] = Z+20
+            T_grab[2,3] = Z+50
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
 
             T_prep = np.copy(T_grab)
@@ -209,7 +229,6 @@ class Rexarm():
         self.gripper_position = gripper_position
         if(update_now):
             self.gripper.set_position(gripper_position)
-
 
     def set_pose(self, pose, update_now = True):
         joint_angles, isGOOD = IK(pose, self.DH_table)

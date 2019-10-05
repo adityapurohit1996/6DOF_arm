@@ -14,18 +14,31 @@ class Kinect():
         
         # mouse clicks & calibration variables
         self.depth2rgb_affine = np.float32([[0.91979737155165608, -0.005650779796284422, 14.549250291682462], [0.0050984125702820127, 0.92535323173382056, 46.503440026116891]])
+        self.depth2rgb_affine = np.loadtxt("depth2rgb_affine.cfg")
+        
         self.kinectCalibrated = False
         self.last_click = np.array([0,0])
         self.new_click = False
-        self.cube_click_points = np.zeros((2,2),int)
         self.rgb_click_points = np.zeros((5,2),int)
         self.depth_click_points = np.zeros((5,2),int)
         self.world_frame = np.zeros(3)
+
+        '''
+        # self.file = np.loadt("projection.cfg",'a+')
+        # #self.projection = np.zeros((3,3))
+        # self.projection = np.array(self.file2.read()) 
+        
+        self.file2.close()
+        self.file2 = open("projection.cfg",'w+')
+        self.file2.close()
+        self.file2 = open("projection.cfg",'a+')
         self.projection =np.array([[  1.86365121e-03  , 1.85859997e-05  ,-6.00905701e-01],
                                     [  1.77272276e-05 , -1.87306461e-03  , 5.14438954e-01],
-                                    [ -3.16498746e-19 ,  7.91435291e-19 ,  1.00000000e+00]]
-                                                                                        )
-
+                                    [ -3.16498746e-19 ,  7.91435291e-19 ,  1.00000000e+00]])
+        '''
+        self.projection = np.loadtxt("projection.cfg") 
+        print(self.projection)                                                                          
+        
         """ Extra arrays for colormaping the depth image"""
         self.DepthHSV = np.zeros((480,640,3)).astype(np.uint8)
         self.DepthCM=np.array([])

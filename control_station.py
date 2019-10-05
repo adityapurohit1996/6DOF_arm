@@ -145,7 +145,6 @@ class Gui(QMainWindow):
 
         self.ui.btnUser5.setText("Detect blocks")
         self.ui.btnUser5.clicked.connect(partial(self.sm.set_next_state, "Detect Blocks"))
-
         self.ui.btnUser11.setText("IK_set_pose")
         self.ui.btnUser11.clicked.connect(partial(self.sm.set_next_state, "IK_set_pose"))
         self.ui.btnUser12.setText("IK_Test")
@@ -153,6 +152,12 @@ class Gui(QMainWindow):
         
         self.ui.btnUser10.setText("Grab_Place")
         self.ui.btnUser10.clicked.connect(partial(self.sm.set_next_state, "Grab_Place"))
+
+        self.ui.btnUser9.setText("BlockSlider")
+        self.ui.btnUser9.clicked.connect(partial(self.sm.set_next_state, "BlockSlider"))
+
+        self.ui.btnUser8.setText("Pick_N_Stack")
+        self.ui.btnUser8.clicked.connect(partial(self.sm.set_next_state, "Pick_N_Stack"))
         
 
 

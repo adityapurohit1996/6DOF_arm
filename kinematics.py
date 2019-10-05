@@ -152,7 +152,7 @@ def get_euler_angles_from_T(T):
     """
     TODO: implement this function
     return the Euler angles from a T matrix
-    
+    /home/student/Desktop/G07/armlab-f19/state_machine.py
     """
     R = T[0:3,0:3]
 
@@ -166,9 +166,26 @@ def get_euler_angles_from_T(T):
     else:
         # ***** Need to choose positive or negative
         theta = np.arctan2(np.sqrt(1-r33**2), r33)
-
-        psi = np.arctan2(R[2,1]/np.sin(theta), -R[2,0]/np.sin(theta))
+        
         phi = np.arctan2(R[1,2]/np.sin(theta), R[0,2]/np.sin(theta))
+        psi = -np.arctan2(R[2,1]/np.sin(theta), -R[2,0]/np.sin(theta))
+        ### WHY I NEED A - HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+        
+        if(phi > 150*np.pi/180):
+            print("phi > 150!!!")
+            phi = phi - np.pi
+            theta = theta -np.pi
+            psi = -psi 
+        elif(phi < -150*np.pi/180):
+            print("phi < -150!!!")
+            phi = phi + np.pi
+            theta = theta -np.pi
+            psi = -psi
+
+        if(psi > 150*np.pi/180):
+            psi = psi - np.pi
+        elif(psi < -150*np.pi/180):
+            psi = psi + np.pi
 
     phi = clamp_if_close_to_angle(phi)
     theta = clamp_if_close_to_angle(theta)
