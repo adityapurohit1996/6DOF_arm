@@ -265,7 +265,13 @@ class StateMachine():
             pose_of_block = [world_frame[i][0],world_frame[i][1],world_frame[i][2], theta[i]]
             print("Point #", i)
             print(pose_of_block)
-            self.rexarm.grab_or_place_block(pose_of_block, 40)
+            
+            if(i%2 == 1):
+                isGrab = True
+            else:
+                isGrab = False
+
+            self.rexarm.grab_or_place_block(pose_of_block, 40, isGrab)
             '''
             
             pose = self.constructPose(world_frame[i],np.array([0,0,0]),self.z_offset)

@@ -124,7 +124,7 @@ class Rexarm():
             self.set_pose(T)
             self.pause(0.2) 
 
-    def check_fesible_IK(self, pose_of_block, delta_Z, desire_mode = "GRAB_FROM_TOP"):
+    def check_fesible_IK(self, pose_of_block, delta_Z, isGrab, desire_mode = "GRAB_FROM_TOP"):
         X, Y, Z, theta = pose_of_block
         theta = theta[0] # only use first z in zyz (right now)
 
@@ -139,7 +139,11 @@ class Rexarm():
             # checking if can grab from top
             T_grab[0,3] = X
             T_grab[1,3] = Y
-            T_grab[2,3] = Z
+
+            if(isGrab):
+                T_grab[2,3] = Z - 40 # cube height
+            else:
+                T_grab[2,3] = Z
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
             
             T_prep = np.copy(T_grab)
@@ -170,7 +174,7 @@ class Rexarm():
             T_grab = np.dot(rotation(theta, "z"), rotation(np.pi/2, "y"))
             T_grab[0,3] = X
             T_grab[1,3] = Y
-            T_grab[2,3] = Z+50
+            T_grab[2,3] = Z -20 # Cube is about 40mm
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
 
             T_prep = np.copy(T_grab)
@@ -188,13 +192,13 @@ class Rexarm():
                 T_grab[:] = np.nan
                 T_prep[:] = np.nan
 
-        return T_grab, T_prep, isTOP
+        return grap_pose, prep_pose, isTOP
 
-    def grab_or_place_block(self, pose_of_block, offset, desire_mode = "GRAB_FROM_TOP"):
+    def grab_or_place_block(self, pose_of_block, offset, isGrab, desire_mode = "GRAB_FROM_TOP"):
         '''
         pose_of_block: X, Y, Z, theta(z-axis)
         '''
-        T_grab, T_prep, isTOP = self.check_fesible_IK(pose_of_block,offset)
+        T_grab, T_prep, isTOP = self.check_fesible_IK(pose_of_block,offset, isGrab)
         
         print("Grab", T_grab)
         print("Prep", T_prep)
