@@ -31,7 +31,7 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 h=480
 w=640
 # size of each checker square [mm]
-square_size = 25.4
+square_size = 25.6
 # pattern of corners on checker board
 pattern_size = (8, 6)
 

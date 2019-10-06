@@ -102,6 +102,17 @@ class Ui_MainWindow(object):
         self.rdoutWrist3JC.setFont(font)
         self.rdoutWrist3JC.setObjectName(_fromUtf8("rdoutWrist3JC"))
         self.verticalLayout_8.addWidget(self.rdoutWrist3JC, QtCore.Qt.AlignLeft)
+
+        """
+        self.rdoutHand = QtGui.QLabel(self.layoutWidget_2)
+        font = QtGui.QFont()
+        font.setFamily(_fromUtf8("Ubuntu Mono"))
+        font.setPointSize(14)
+        self.rdoutBaseJC.setFont(font)
+        self.rdoutBaseJC.setObjectName(_fromUtf8("rdoutHandJC"))
+        self.verticalLayout_8.addWidget(self.rdoutBaseJC, QtCore.Qt.AlignLeft)
+        """
+
         self.layoutWidget_3 = QtGui.QWidget(self.OutputFrame)
         self.layoutWidget_3.setGeometry(QtCore.QRect(10, 30, 66, 130)) #(10, 30, 66, 120)
         self.layoutWidget_3.setObjectName(_fromUtf8("layoutWidget_3"))
@@ -271,9 +282,9 @@ class Ui_MainWindow(object):
         self.radioDepth = QtGui.QRadioButton(self.centralwidget)
         self.radioDepth.setGeometry(QtCore.QRect(360, 10, 117, 22))
         self.radioDepth.setObjectName(_fromUtf8("radioDepth"))
-        self.radioUsr1 = QtGui.QRadioButton(self.centralwidget)
-        self.radioUsr1.setGeometry(QtCore.QRect(480, 10, 117, 22))
-        self.radioUsr1.setObjectName(_fromUtf8("radioUsr1"))
+        self.radioBlockDetect = QtGui.QRadioButton(self.centralwidget)
+        self.radioBlockDetect.setGeometry(QtCore.QRect(480, 10, 117, 22))
+        self.radioBlockDetect.setObjectName(_fromUtf8("radioBlockDetect"))
         self.SliderFrame = QtGui.QGroupBox(self.centralwidget)
         self.SliderFrame.setGeometry(QtCore.QRect(240, 590, 641, 191))
         self.SliderFrame.setObjectName(_fromUtf8("SliderFrame"))
@@ -300,6 +311,9 @@ class Ui_MainWindow(object):
         self.W3LabelS = QtGui.QLabel(self.layoutWidget)
         self.W3LabelS.setObjectName(_fromUtf8("W3LabelS"))
         self.verticalLayout.addWidget(self.W3LabelS, QtCore.Qt.AlignRight)
+        self.HandLabelS = QtGui.QLabel(self.layoutWidget)
+        self.HandLabelS.setObjectName(_fromUtf8("HandLabelS"))
+        self.verticalLayout.addWidget(self.HandLabelS, QtCore.Qt.AlignRight)
         self.layoutWidget_6 = QtGui.QWidget(self.SliderFrame)
         self.layoutWidget_6.setGeometry(QtCore.QRect(70, 20, 371, 150)) #70, 20, 371, 136
         self.layoutWidget_6.setObjectName(_fromUtf8("layoutWidget_6"))
@@ -341,6 +355,16 @@ class Ui_MainWindow(object):
         self.sldrWrist3.setOrientation(QtCore.Qt.Horizontal)
         self.sldrWrist3.setObjectName(_fromUtf8("sldrWrist3"))
         self.verticalLayout_2.addWidget(self.sldrWrist3)
+
+
+        self.sldrHand = QtGui.QSlider(self.layoutWidget_6)
+        self.sldrHand.setMinimum(-179)
+        self.sldrHand.setMaximum(180)
+        self.sldrHand.setOrientation(QtCore.Qt.Horizontal)
+        self.sldrHand.setObjectName(_fromUtf8("sldrHand"))
+        self.verticalLayout_2.addWidget(self.sldrHand)
+
+
         self.layoutWidget_7 = QtGui.QWidget(self.SliderFrame)
         self.layoutWidget_7.setGeometry(QtCore.QRect(462, 20, 51, 147)) #(462, 20, 51, 137)
         self.layoutWidget_7.setObjectName(_fromUtf8("layoutWidget_7"))
@@ -364,10 +388,16 @@ class Ui_MainWindow(object):
         self.rdoutWrist3 = QtGui.QLabel(self.layoutWidget_7)
         self.rdoutWrist3.setObjectName(_fromUtf8("rdoutWrist3"))
         self.verticalLayout_6.addWidget(self.rdoutWrist3)
+
+        self.rdoutHand = QtGui.QLabel(self.layoutWidget_7)
+        self.rdoutHand.setObjectName(_fromUtf8("rdoutHand"))
+        self.verticalLayout_6.addWidget(self.rdoutHand)
+
+
         self.sldrGrip1 = QtGui.QSlider(self.SliderFrame)
         self.sldrGrip1.setGeometry(QtCore.QRect(77, 166, 133, 29)) #77
-        self.sldrGrip1.setMinimum(-179)
-        self.sldrGrip1.setMaximum(180)
+        self.sldrGrip1.setMinimum(0)
+        self.sldrGrip1.setMaximum(1)
         self.sldrGrip1.setOrientation(QtCore.Qt.Horizontal)
         self.sldrGrip1.setObjectName(_fromUtf8("sldrGrip1"))
         self.G1LableS = QtGui.QLabel(self.SliderFrame)
@@ -577,7 +607,7 @@ class Ui_MainWindow(object):
         self.radioVideo.setText(_translate("MainWindow", "Video", None))
         self.radioUsr2.setText(_translate("MainWindow", "User 2", None))
         self.radioDepth.setText(_translate("MainWindow", "Depth", None))
-        self.radioUsr1.setText(_translate("MainWindow", "User 1", None))
+        self.radioBlockDetect.setText(_translate("MainWindow", "Block Detect", None))
         self.SliderFrame.setTitle(_translate("MainWindow", "Joint Sliders", None))
         self.BLabelS.setText(_translate("MainWindow", "Base", None))
         self.SLabelS.setText(_translate("MainWindow", "Shoulder", None))
@@ -585,12 +615,14 @@ class Ui_MainWindow(object):
         self.WLabelS.setText(_translate("MainWindow", "Wrist1", None))
         self.W2LabelS.setText(_translate("MainWindow", "Wrist2", None))
         self.W3LabelS.setText(_translate("MainWindow", "Wrist3", None))
+        self.HandLabelS.setText(_translate("MainWindow", "Hand", None))
         self.rdoutBase.setText(_translate("MainWindow", "0", None))
         self.rdoutShoulder.setText(_translate("MainWindow", "0", None))
         self.rdoutElbow.setText(_translate("MainWindow", "0", None))
         self.rdoutWrist.setText(_translate("MainWindow", "0", None))
         self.rdoutWrist2.setText(_translate("MainWindow", "0", None))
         self.rdoutWrist3.setText(_translate("MainWindow", "0", None))
+        self.rdoutHand.setText(_translate("MainWindow", "0", None))
         self.G1LableS.setText(_translate("MainWindow", "Gripper", None))
         self.rdoutGrip1.setText(_translate("MainWindow", "0", None))
         # self.rdoutGrip2.setText(_translate("MainWindow", "0", None))

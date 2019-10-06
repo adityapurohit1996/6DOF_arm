@@ -1,4 +1,5 @@
 import time
+import cv2
 import numpy as np
 from kinematics import *
 
@@ -15,6 +16,11 @@ class StateMachine():
         self.status_message = "State: Idle"
         self.current_state = "idle"
         self.next_state = "idle"
+        self.Z0_offset = 13 #mm
+        self.stack_step = 40 #mm
+        self.z_offset = 60 #mm
+        
+
         self.IK_target = self.rexarm.get_positions
 
     def set_next_state(self, state):
@@ -52,6 +58,18 @@ class StateMachine():
                 self.IK_set_pose()
             if(self.next_state == "IK_test"):
                 self.IK_test()
+            if(self.next_state == "Detect Blocks") :
+                self.BlockDetection()
+            if(self.next_state == "Grab_Place"):
+                theta = np.array([[0, 0, 0],[0, 0, 0]])
+                theta = np.deg2rad(theta)
+                world_frame = self.clickCoordnates(2)
+                z = self.Z0_offset #mm 
+                self.Grab_Place(world_frame,theta,z)
+            if(self.next_state == "BlockSlider"):
+                self.BlockSlider(1)
+            if(self.next_state == "Pick_N_Stack"):
+                self.Pick_N_Stack(3)
 
                 
         if(self.current_state == "estop"):
@@ -83,10 +101,207 @@ class StateMachine():
         if(self.current_state == "IK_test"):
             if(self.next_state == "idle"):
                 self.idle()
+        if(self.current_state == "Detect Blocks"):
+            if(self.next_state == "idle"):
+                self.idle()
+        
+        if(self.current_state == "Grab_Place"):
+            if(self.next_state == "idle"):
+                self.idle()
+        
+        if(self.current_state == "BlockSlider"):
+            if(self.next_state == "idle"):
+                self.idle()
+
+        if(self.current_state == "Pick_N_Stack"):
+            if(self.next_state == "idle"):
+                self.idle()
+        
                 
                
 
     """Functions run for each state"""
+    def rgb2world(self):
+        """ 
+        Convert rgb points at mouse click into world coordinates 
+        """
+        x = self.kinect.last_click[0]
+        y = self.kinect.last_click[1]
+        world_frame = np.zeros((1,3))
+        #print("Click Coordinates",x,y)
+        if(self.kinect.currentDepthFrame.any() != 0):
+            z = self.kinect.currentDepthFrame[y][x]
+            #convert camera data to depth in mm
+            depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
+
+        world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
+        #To convert depth to IK convention
+        world_frame[2] = -world_frame[2] + 939
+        return world_frame
+
+    def constructPose(self,world_frame,theta,z):
+        world_frame[2] += z
+        #homogeneous = np.transpose(np.ones((1,1)))
+        #coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
+        coordinates_global = np.append(world_frame,1)
+        orientation_gripper = np.zeros((4,4))
+        pose = np.zeros((4,4))
+        orientation_gripper = np.dot(np.dot(-1*rotation(theta[0],'z'),rotation(theta[1],'y')),rotation(theta[2],'z'))
+        pose[0:4,0:4]=orientation_gripper
+        pose[:,3] = np.transpose(coordinates_global)
+        return pose
+    
+    def clickCoordnates(self,numPoints):
+        world_frame = np.zeros((numPoints,3))
+        cube_click_points = np.zeros((numPoints,2),int)
+        #Get the World Coordinates of the pick up and drop off from mouse clicks============================
+        i = 0
+        for j in range(numPoints):
+            self.status_message = "Click the current location of cube and location the cube should be placed"
+            while (i <= j):
+                #self.rexarm.get_feedback()
+                if(self.kinect.new_click == True):
+                    cube_click_points[i] = self.kinect.last_click.copy()
+                    i = i + 1
+                    self.kinect.new_click = False  
+                world_frame[j] = self.rgb2world()     
+        i = 0
+        #=====================================================================================================
+        print("World Frame Clicked",world_frame)
+        # world_frame[0:2,2] += z_offset
+        homogeneous = np.transpose(np.ones((1,2)))
+        coordinates_global = np.concatenate((world_frame,homogeneous),axis = 1)
+        return world_frame  
+
+    def BlockSlider(self,stack):
+        self.status_message = "State: BlockSlider - Completes Event in Competition"
+        self.current_state = "Grab_Place"
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.open_gripper()
+        #Motion Planning
+        # slidingCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100]])
+        slidingCoordinates = np.array([[120, 100],[100, 100], [100, -100],[-100, -100]])
+
+        pose = self.constructPose(np.append(slidingCoordinates[0],0),np.array([0,0,0]),self.z_offset - 55)
+        #print(pose)
+        self.rexarm.set_pose(pose)
+        self.rexarm.pause(4)
+        print("frist pose: ", pose)
+        
+        self.rexarm.interpolating_in_WS(pose[0:3,0:3], np.array([120,100,5]), np.array([120,-100,5]), 10)
+
+        '''
+        if(stack):
+            pose[2][3] = 20
+        else:
+            pose[2][3] = self.Z0_offset
+
+        #print(pose)
+        self.rexarm.set_pose(pose)
+        self.rexarm.pause(3)
+        self.rexarm.close_gripper()
+        self.rexarm.pause(2)
+        size = np.size(slidingCoordinates,0)
+        for i in range(size-1):
+            pose[0:2,3] = slidingCoordinates[i+1]
+            self.rexarm.set_pose(pose)
+            self.rexarm.pause(3)
+            #print(pose)
+        self.rexarm.open_gripper()
+        #self.rexarm.pause(1)
+        '''
+
+        #Finished
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+    
+    def Pick_N_Stack(self,numBlocks):
+        self.status_message = "State: Pick_N_Stack - Stacks cubes in a specified location"
+        self.current_state = "Pick_N_Stack"
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.open_gripper()
+        #Motion Planning
+        world_frame = self.clickCoordnates(3)
+        stack_location = np.array([-100,-100,self.Z0_offset])
+        size = np.size(world_frame,0)
+        '''
+        new_plan = zeros((size*2,3))
+        j=1
+        for i in range(size)
+            new_plan[i] = world_frame[i]
+            new_plan[j] = stack_location
+            j+=2
+        world_frame = new_plan  
+        '''
+        theta = np.array([0,0,0])
+        height_stack = self.Z0_offset
+        for i in range(size):
+            '''60
+            print(height_stack)
+            print(world_frame)
+            print(world_frame[i])
+            print(stack_location)
+            print(np.stack((world_frame[i],stack_location)))
+            '''
+            self.Grab_Place(np.stack((world_frame[i],stack_location)), theta, height_stack)
+            height_stack = height_stack+self.stack_step
+        #Finished
+        for joint in self.rexarm.joints:
+            joint.set_position(0.0)
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+        
+
+    def Grab_Place(self,world_frame, theta, z):
+        self.status_message = "State: Grab_Place - Grabbing a Cube at one global coordinate and placing the cube in another"
+        self.current_state = "Grab_Place"
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        self.rexarm.open_gripper()
+        
+        #Motion Planning
+        size = np.size(world_frame,0)
+        for i in range(size):
+            
+            pose_of_block = [world_frame[i][0],world_frame[i][1],world_frame[i][2], theta[i]]
+            print("Point #", i)
+            print(pose_of_block)
+            self.rexarm.grab_or_place_block(pose_of_block, 40)
+            '''
+            
+            pose = self.constructPose(world_frame[i],np.array([0,0,0]),self.z_offset)
+            print(pose)
+            self.rexarm.set_pose(pose)
+            self.rexarm.pause(4)
+            if (i % 2) == 0 | i==0:
+                pose[2][3] = self.Z0_offset
+            else:
+                pose[2][3] = z
+            #print(pose)
+            self.rexarm.set_pose(pose)
+            self.rexarm.pause(3)
+            if (i % 2) == 0 | i==0:
+                self.rexarm.close_gripper()
+            else: 
+                print("Made it")
+                self.rexarm.open_gripper()
+
+            self.rexarm.pause(1)
+            
+        #Slowly move gripper above cube and then back to zero joint positions
+        pose[2][3] = self.z_offset
+        self.rexarm.set_speeds_normalized_global(0.05,update_now=True)
+        # self.rexarm.set_pose(pose)
+        self.rexarm.pause(2)
+        self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
+        '''
+
+        #Finished
+        for joint in self.rexarm.joints:
+            joint.set_position(0.0)
+        self.set_next_state("idle")
+        self.rexarm.get_feedback()
+        
+
     def IK_set_pose(self):
         self.status_message = "State: IK_set_pose - setting pose for IK test"
         self.current_state = "IK_set_pose"
@@ -218,8 +433,11 @@ class StateMachine():
                             "upper left corner of board",
                             "upper right corner of board",
                             "lower right corner of board",
-                            "center of shoulder motor"]
+                            "corner of the tape"]
         i = 0
+
+        self.kinect.depth2rgb_affine = np.float32([[1,0,0],[0,1,0]])
+
         for j in range(5):
             self.status_message = "Calibration - Click %s in RGB image" % location_strings[j]
             while (i <= j):
@@ -239,10 +457,49 @@ class StateMachine():
                     i = i + 1
                     self.kinect.new_click = False
    
-        print(self.kinect.rgb_click_points)
-        print(self.kinect.depth_click_points)
+  
+        Zc = 939
+        b = np.transpose([-303.2,-303.2,303.2,-303.2,303.2,303.2,-303.2,303.2,179.38-303.2,174-303.2])
+        World_points = np.array([[-303.2,-303.2,Zc],[-303.2,303.2,Zc],[303.2,303.2,Zc],[303.2,-303.2,Zc],[179-303.2,174-303.2,Zc]],dtype= np.float64)
+        Camera_coord =np.array([])
+        #intrinsic_matrix = self.kinect.loadCameraCalibration()
 
-        """TODO Perform camera calibration here"""
+        #intrinsic matrix from camera_cal.py
+        intrinsic_matrix = np.array([[ 526.17413472 ,   0   ,       325.10510152],
+                            [   0      ,    526.04886194,  276.03701925],
+                            [   0 ,           0     ,       1        ]])
 
+        inv_intrinsic_matrix = np.linalg.inv(intrinsic_matrix)
+        
+
+        #get the affine transform from depth image to affine image
+        self.kinect.depth2rgb_affine = self.kinect.getAffineTransform(self.kinect.depth_click_points,self.kinect.rgb_click_points)
+        np.savetxt("depth2rgb_affine.cfg", self.kinect.depth2rgb_affine)
+        # Generate Camera coordinates from image coordinates
+        for i,rgb in enumerate (self.kinect.rgb_click_points) :
+            a = np.array([rgb[0],rgb[1],1])
+            a = np.transpose(a)
+            coord =Zc* np.dot(inv_intrinsic_matrix ,a) 
+            coord =[coord]
+            if i == 0:
+                Camera_coord = coord
+            else :
+                Camera_coord = np.concatenate ((Camera_coord,coord),axis = 0)
+
+        # Find the extrinsic matrix for relation between camera coordinates and world coordinates
+
+        extrinsic_affine = self.kinect.getAffineTransform3(Camera_coord,np.squeeze(World_points))
+
+        # Find the projection matrix between image and world coordinates
+        self.kinect.projection =  np.dot(extrinsic_affine, inv_intrinsic_matrix)
+        np.savetxt("projection.cfg", self.kinect.projection)
+
+        self.kinect.kinectCalibrated = True
         self.status_message = "Calibration - Completed Calibration"
         time.sleep(1)
+
+    def BlockDetection(self) :
+        self.kinect.loadDepthFrame()
+        print("Loaded depth frame")
+        x,y = self.kinect.detectBlocksInDepthImage()
+        print(x,y)

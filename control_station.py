@@ -37,7 +37,7 @@ DEVICENAME = "/dev/ttyACM0".encode('utf-8')
 
 """Threads"""
 class VideoThread(QThread):
-    updateFrame = pyqtSignal(QImage, QImage)
+    updateFrame = pyqtSignal(QImage, QImage, QImage)
 
     def __init__(self, kinect, parent=None):
         QThread.__init__(self, parent=parent) 
@@ -49,7 +49,8 @@ class VideoThread(QThread):
             self.kinect.captureDepthFrame()
             rgb_frame = self.kinect.convertFrame()
             depth_frame = self.kinect.convertDepthFrame()
-            self.updateFrame.emit(rgb_frame, depth_frame)
+            block_frame = self.kinect.convertBlockFrame()
+            self.updateFrame.emit(rgb_frame, depth_frame,block_frame)
             time.sleep(.03)
 
 class LogicThread(QThread):   
@@ -104,10 +105,12 @@ class Gui(QMainWindow):
         elbw = DXL_MX(port_num, 3)
         wrst = DXL_AX(port_num, 4)
         wrst2 = DXL_AX(port_num, 5)
+        wrst3 = DXL_XL(port_num, 6)
+        gripper = DXL_XL(port_num, 7)
 
         """Objects Using Other Classes"""
         self.kinect = Kinect()
-        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2),0)
+        self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3),gripper)
         self.tp = TrajectoryPlanner(self.rexarm)
         self.sm = StateMachine(self.rexarm, self.tp, self.kinect)
     
@@ -126,8 +129,9 @@ class Gui(QMainWindow):
         self.ui.sldrShoulder.valueChanged.connect(self.sliderChange)
         self.ui.sldrElbow.valueChanged.connect(self.sliderChange)
         self.ui.sldrWrist.valueChanged.connect(self.sliderChange)
-
         self.ui.sldrWrist2.valueChanged.connect(self.sliderChange)
+        self.ui.sldrWrist3.valueChanged.connect(self.sliderChange) 
+        self.ui.sldrHand.valueChanged.connect(self.sliderChange)
 
         self.ui.sldrMaxTorque.valueChanged.connect(self.sliderChange)
         self.ui.sldrSpeed.valueChanged.connect(self.sliderChange)
@@ -139,10 +143,22 @@ class Gui(QMainWindow):
         self.ui.btnUser4.setText("TP test")
         self.ui.btnUser4.clicked.connect(partial(self.sm.set_next_state, "TP test"))
 
+        self.ui.btnUser5.setText("Detect blocks")
+        self.ui.btnUser5.clicked.connect(partial(self.sm.set_next_state, "Detect Blocks"))
         self.ui.btnUser11.setText("IK_set_pose")
         self.ui.btnUser11.clicked.connect(partial(self.sm.set_next_state, "IK_set_pose"))
         self.ui.btnUser12.setText("IK_Test")
         self.ui.btnUser12.clicked.connect(partial(self.sm.set_next_state, "IK_test"))
+        
+        self.ui.btnUser10.setText("Grab_Place")
+        self.ui.btnUser10.clicked.connect(partial(self.sm.set_next_state, "Grab_Place"))
+
+        self.ui.btnUser9.setText("BlockSlider")
+        self.ui.btnUser9.clicked.connect(partial(self.sm.set_next_state, "BlockSlider"))
+
+        self.ui.btnUser8.setText("Pick_N_Stack")
+        self.ui.btnUser8.clicked.connect(partial(self.sm.set_next_state, "Pick_N_Stack"))
+        
 
 
         """initalize manual control off"""
@@ -177,12 +193,14 @@ class Gui(QMainWindow):
 
     """ Slots attach callback functions to signals emitted from threads"""
 
-    @pyqtSlot(QImage, QImage)
-    def setImage(self, rgb_image, depth_image):
+    @pyqtSlot(QImage, QImage, QImage)
+    def setImage(self, rgb_image, depth_image,block_image):
         if(self.ui.radioVideo.isChecked()):
             self.ui.videoDisplay.setPixmap(QPixmap.fromImage(rgb_image))
         if(self.ui.radioDepth.isChecked()):
             self.ui.videoDisplay.setPixmap(QPixmap.fromImage(depth_image))
+        if(self.ui.radioBlockDetect.isChecked()):
+            self.ui.videoDisplay.setPixmap(QPixmap.fromImage(block_image))
 
     @pyqtSlot(list)
     def updateJointReadout(self, joints):
@@ -227,8 +245,9 @@ class Gui(QMainWindow):
         self.ui.rdoutShoulder.setText(str(self.ui.sldrShoulder.value()))
         self.ui.rdoutElbow.setText(str(self.ui.sldrElbow.value()))
         self.ui.rdoutWrist.setText(str(self.ui.sldrWrist.value()))
-
         self.ui.rdoutWrist2.setText(str(self.ui.sldrWrist2.value()))
+        self.ui.rdoutWrist2.setText(str(self.ui.sldrWrist3.value()))
+        self.ui.rdoutWrist2.setText(str(self.ui.sldrHand.value()))
 
         self.ui.rdoutTorq.setText(str(self.ui.sldrMaxTorque.value()) + "%")
         self.ui.rdoutSpeed.setText(str(self.ui.sldrSpeed.value()) + "%")
@@ -238,8 +257,12 @@ class Gui(QMainWindow):
                            self.ui.sldrShoulder.value()*D2R,
                            self.ui.sldrElbow.value()*D2R,
                            self.ui.sldrWrist.value()*D2R,
-                           self.ui.sldrWrist2.value()*D2R])
+                           self.ui.sldrWrist2.value()*D2R,
+                           self.ui.sldrWrist3.value()*D2R])
         self.rexarm.set_positions(joint_positions, update_now = False)
+        # self.rexarm.pause(0.1)
+        self.rexarm.set_gripper_position(self.ui.sldrHand.value()*D2R, update_now = False)
+        # self.rexarm.gripper.set_position(self.ui.sldrHand.value()*D2R)
 
     def directControlChk(self, state):
         if state == Qt.Checked:
@@ -268,7 +291,17 @@ class Gui(QMainWindow):
             if(self.kinect.currentDepthFrame.any() != 0):
                 z = self.kinect.currentDepthFrame[y][x]
                 self.ui.rdoutMousePixels.setText("(%.0f,%.0f,%.0f)" % (x,y,z))
-                self.ui.rdoutMouseWorld.setText("(-,-,-)")
+                #convert camera data to depth in mm
+                depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
+
+               # if self.kinect.kinectCalibrated == True :
+                world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
+                #To convert depth to IK convention
+                world_frame[2] = -world_frame[2] + 939
+                self.ui.rdoutMouseWorld.setText("(%.0f,%.0f,%.0f)" % (world_frame[0],world_frame[1],world_frame[2]))
+                self.kinect.world_frame = world_frame # use this variable in click and grab 
+                #else :
+                #    self.ui.rdoutMouseWorld.setText("(-,-,-)")
 
     def mousePressEvent(self, QMouseEvent):
         """ 
