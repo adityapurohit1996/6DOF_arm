@@ -219,8 +219,49 @@ class Kinect():
         # return (x, y, theta)
 
       '''  
+    def GetContourRGB(self,contour_points):
+        Contour_RGB=list()
+        for point in contour_points:
+            #print(point)
+            x= int(point[1])
+            y= int(point[0])  
+            RGB = np.array([self.currentVideoFrame[x][y][0],self.currentVideoFrame[x][y][1],self.currentVideoFrame[x][y][2]])
+            Contour_RGB.append(RGB)
+        return Contour_RGB
+            
+    def FindColor(self,rgb):
+        dist=np.zeros(7)
+        BLACK = np.array([60, 60 , 60])
+        ORANGE = np.array([250, 80 , 16])
+        YELLOW = np.array([250, 250 , 230])
+        RED = np.array([180, 15 , 50])
+        GREEN = np.array([85,145, 90])
+        BLUE = np.array([90,100,160])
+        PURPLE = np.array([130, 70 , 145])
+        colors =['Black','Orange','Yellow','Red','Green','Blue','Purple']
+        colors_array = np.array([BLACK,ORANGE,YELLOW, RED,GREEN,BLUE, PURPLE])
+        for iter,i in enumerate(colors_array):
+            dist[iter] = np.linalg.norm(i-rgb)
+           # print(dist)
+        if dist.any() != 0:
+            dist_min = np.argmin(dist)
+            return colors[dist_min]
 
     def DetectColor(self):
+        # Pass the contour points to get rgb/hsv points
+        contour_colors = list()
+        Contour_RGB = self.GetContourRGB(self.Contour_IC)
+        #print(Contour_RGB)
+
+        #Pass the contour RGB/HSV to identify color
+       # print(len(Contour_RGB))
+        if len(Contour_RGB) > 0:
+            for rgb in Contour_RGB:
+                color = self.FindColor(rgb)
+                contour_colors.append(color)
+        #print(Contour_RGB)
+        print(contour_colors)
+        pass
         
 
 
@@ -240,7 +281,7 @@ class Kinect():
             bounding_rgb[i,:] = rgb
        '''
         ROI[100:460,146:490] = I_depth[100:460,146:490]
-        ROI[230:320,270:370] = 255
+        ROI[200:340,250:360] = 0
         
         ret, I_th = cv2.threshold(ROI, 200, 255, cv2.THRESH_BINARY_INV)
         I_th = cv2.blur(I_th, (7,7))
@@ -264,7 +305,7 @@ class Kinect():
                 y=temp[1]
                 z = self.currentDepthFrame[int(y)][int(x)]
                 depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
-                print(depth)
+                #print(depth)
                 if depth > max_depth or depth<min_depth :
                     pass
                 else :
@@ -273,8 +314,8 @@ class Kinect():
 
                 # print(contour)
                 
-
-                    cv2.drawContours(mask, contours, i, 255, -1)
+                    #TODO: Add angle if required
+                    cv2.drawContours(I_th, contours, i,(128,128,128),10)
 
                     rects.append([x,y,1])
                 #masks.append(cv2.drawContours(mask, contours, i, 255, -1))
@@ -287,9 +328,12 @@ class Kinect():
         #cv2.imshow('mask 2', masks[1])
         if rects :
            self.Contour_IC = rects
+           #print(self.Contour_IC)
+        else :
+            self.Contour_IC = list()
 
-
-        return mask
+        self.DetectColor()
+        return I_th
 
 
 '''
