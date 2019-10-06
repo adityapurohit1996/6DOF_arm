@@ -318,7 +318,7 @@ class Kinect():
                 y=temp[1]
                 z = self.currentDepthFrame[int(y)][int(x)]
                 depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
-                #print(depth)
+               # print(depth)
                 if depth > max_depth or depth<min_depth :
                     pass
                 else :
