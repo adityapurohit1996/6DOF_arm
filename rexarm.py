@@ -31,16 +31,16 @@ class Rexarm():
                             [-180+safety_margim, 179.99-safety_margim],
                             [-25-90+safety_margim, 208-90-safety_margim],
                             [-110+safety_margim, 100-safety_margim],
-                            [-180+safety_margim, 179.99-safety_margim],
+                            [-150+safety_margim, 150-safety_margim],
                             [-125+safety_margim, 120-safety_margim],
-                            [-60+safety_margim, 60-safety_margim],
-                            [-60+safety_margim, 60-safety_margim],], dtype=np.float)*D2R
+                            [-150+safety_margim, 150-safety_margim]], dtype=np.float)*D2R
 
         """ Commanded Values """
         self.num_joints = len(joints)
         self.position = [0.0] * self.num_joints     # degrees
         self.speed = [1.0] * self.num_joints        # 0 to 1
         self.max_torque = [1.0] * self.num_joints   # 0 to 1
+        self.gripper_position = 0.0
 
         """ Feedback Values """
         self.joint_angles_fb = [0.0] * self.num_joints # degrees
@@ -64,36 +64,174 @@ class Rexarm():
             joint.set_torque_limit(0.5)
             joint.set_speed(0.25)
         if(self.gripper != 0):
+            print("initialize!!")
+            self.gripper.enable_torque()
+            self.gripper.set_position(self.gripper_open_pos)
             self.gripper.set_torque_limit(1.0)
             self.gripper.set_speed(0.8)
-            self.close_gripper()
+            #self.close_gripper()
 
     def open_gripper(self):
         """ TODO """
         self.gripper_state = False
+        self.gripper.set_position(self.gripper_open_pos)
         pass
 
     def close_gripper(self):
         """ TODO """
         self.gripper_state = True
+        self.gripper.set_position(self.gripper_closed_pos)
         pass
 
     def toggle_gripper(self):
         """ TODO """
+        if(self.gripper_state is True):
+            self.gripper_state = False
+            self.gripper.set_position(self.gripper_open_pos)
+        else:
+            self.gripper_state = True
+            self.gripper.set_position(self.gripper_closed_pos)
         pass
 
     def set_positions(self, joint_angles, update_now = True):
         self.clamp(joint_angles)
-        print(joint_angles)
+        # print(joint_angles)
         for i,joint in enumerate(self.joints):
             #print(i)
+            #print(joint)
             #print(joint_angles[i])
             self.position[i] = joint_angles[i]
             if(update_now):
                 joint.set_position(joint_angles[i])
 
+    def interpolating_in_WS(self, orientation, pi, pf, density):
+        '''
+        density: mm/point
+        '''
+        num = max(abs(pf-pi))/density
+        
+        step = (1.0/num)*(pf-pi)
+        path = step[:,None]*np.arange(num) + pi[:,None]
+        path = np.transpose(path)
+
+        T = np.identity(4)
+        T[0:3,0:3] = orientation
+
+        for position in path:
+            print(position)
+            T[0:3,3] = position
+            print(T)
+            self.set_pose(T)
+            self.pause(0.2) 
+
+    def check_fesible_IK(self, pose_of_block, delta_Z, desire_mode = "GRAB_FROM_TOP"):
+        X, Y, Z, theta = pose_of_block
+        theta = theta[0] # only use first z in zyz (right now)
+
+        T_grab = np.identity(4)
+        isTOP = False
+
+        if(desire_mode == "GRAB_FROM_TOP"):
+            T_grab[0:3,0:3] = np.array([[-np.cos(theta), -np.sin(theta), 0],
+                                    [np.sin(theta), -np.cos(theta), 0],
+                                    [0, 0, -1]])
+            
+            # checking if can grab from top
+            T_grab[0,3] = X
+            T_grab[1,3] = Y
+            T_grab[2,3] = Z
+            _, REACHABLE_grab = IK(T_grab, self.DH_table)
+            
+            T_prep = np.copy(T_grab)
+            T_prep[2,3] = Z+delta_Z
+            _, REACHABLE_above = IK(T_prep, self.DH_table)
+
+            print("From TOP:")
+            print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above)
+
+            if REACHABLE_grab and REACHABLE_above:
+                grap_pose = T_grab
+                prep_pose = T_prep
+                isTOP = True
+        print("isTOP: ", isTOP)
+
+        if(not isTOP):
+            if(X >= 0):
+                if(Y >= 0):
+                    theta = theta
+                else:
+                    theta = theta - np.pi/2
+            else:
+                if(Y >= 0):
+                    theta = theta + np.pi/2
+                else:
+                    theta = theta + np.pi
+
+            T_grab = np.dot(rotation(theta, "z"), rotation(np.pi/2, "y"))
+            T_grab[0,3] = X
+            T_grab[1,3] = Y
+            T_grab[2,3] = Z+50
+            _, REACHABLE_grab = IK(T_grab, self.DH_table)
+
+            T_prep = np.copy(T_grab)
+            T_prep[0,3] = X - delta_Z*np.cos(theta)
+            T_prep[1,3] = Y - delta_Z*np.sin(theta)
+            _, REACHABLE_side = IK(T_grab, self.DH_table)
+
+            print("From Horizon:")
+            print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above)
+                
+            if REACHABLE_grab and REACHABLE_side:
+                grap_pose = T_grab
+                prep_pose = T_prep
+            else:
+                T_grab[:] = np.nan
+                T_prep[:] = np.nan
+
+        return T_grab, T_prep, isTOP
+
+    def grab_or_place_block(self, pose_of_block, offset, desire_mode = "GRAB_FROM_TOP"):
+        '''
+        pose_of_block: X, Y, Z, theta(z-axis)
+        '''
+        T_grab, T_prep, isTOP = self.check_fesible_IK(pose_of_block,offset)
+        
+        print("Grab", T_grab)
+        print("Prep", T_prep)
+        print("isTOP", isTOP)
+
+        if(isTOP):
+            self.set_pose(T_prep)
+            self.pause(3)
+            self.set_pose(T_grab)
+            self.pause(3)
+            self.toggle_gripper()
+            self.pause(1)
+            self.set_pose(T_prep)
+            self.pause(3)
+        elif(T_grab[0,0] != np.nan):
+            # grapping from sideway, can still edit pose
+            self.set_pose(T_prep)
+            self.pause(3)
+            self.set_pose(T_grab)
+            self.pause(3)
+            self.toggle_gripper()
+            self.pause(1)
+            self.set_pose(T_prep)
+            self.pause(3)
+        else:
+            print("Sorry, I can't do this move.")
+
+        print("DONE this pose!!")
+
+    def set_gripper_position(self, gripper_position, update_now = True):
+        
+        self.gripper_position = gripper_position
+        if(update_now):
+            self.gripper.set_position(gripper_position)
+
     def set_pose(self, pose, update_now = True):
-        joint_angles = IK(pose, self.DH_table)
+        joint_angles, isGOOD = IK(pose, self.DH_table)
         print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
 
@@ -130,6 +268,7 @@ class Rexarm():
         self.set_positions(self.position)
         self.set_speeds_normalized(self.speed)
         self.set_torque_limits(self.max_torque)
+        self.gripper.set_position(self.gripper_position)
 
     def enable_torque(self):
         for joint in self.joints:
