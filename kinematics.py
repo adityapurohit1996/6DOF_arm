@@ -168,20 +168,26 @@ def get_euler_angles_from_T(T):
         theta = np.arctan2(np.sqrt(1-r33**2), r33)
         
         phi = np.arctan2(R[1,2]/np.sin(theta), R[0,2]/np.sin(theta))
-        psi = -np.arctan2(R[2,1]/np.sin(theta), -R[2,0]/np.sin(theta))
+        psi = np.arctan2(R[2,1]/np.sin(theta), -R[2,0]/np.sin(theta))
         ### WHY I NEED A - HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
         
+        phi = phi%(2*np.pi)
+        psi = psi%(2*np.pi)
+
+        if(phi > np.pi):
+            phi = phi -2*np.pi
+
         if(phi > 150*np.pi/180):
             print("phi > 150!!!")
             phi = phi - np.pi
-            theta = theta -np.pi
-            psi = -psi 
+            theta = -theta
+            # psi = -psi 
         elif(phi < -150*np.pi/180):
             print("phi < -150!!!")
             phi = phi + np.pi
-            theta = theta -np.pi
-            psi = -psi
-
+            theta = -theta
+            # psi = -psi 
+ 
         if(psi > 150*np.pi/180):
             psi = psi - np.pi
         elif(psi < -150*np.pi/180):
@@ -244,6 +250,8 @@ def rotation(theta, axis):
 
 
 """main function for testing"""
+import rexarm
+
 def test():
     # DH = [theta, di, ai, alpha]
     DH_table = np.array([[0, 74.76+40.64, 0, -90],
@@ -260,36 +268,46 @@ def test():
                         [0, 0, 0, 90],
                         [0, 150, 0, 0]])
     
-    th1 = 0
+    th1 = 90
     th2 = 90
     th3 = 0
-    th4 = 0
+    th4 = 90
     th5 = 0
     th6 = 0
     thetas = np.array([th1, th2, th3, th4, th5, th6])
     joint_angles = np.radians(thetas)
     
-    T_FK = FK_dh(joint_angles, DH_FK)
+
+    pose = [200, 200, 20, [np.pi/4, 0, 0]]
+    Rexarm = rexarm.Rexarm([0],0 )
+    grap_pose, prep_pose, isTOP = Rexarm.check_fesible_IK(pose, 20, False)
+    print("grap_pose", grap_pose)
+    print("prep_pose", prep_pose)
+
+    IK_angle, REACHABLE = IK(grap_pose, DH_table)
+
+
+    # T_FK = FK_dh(joint_angles, DH_FK)
     # T_FK = FK_dh(joint_angles, DH_table)
     
-    IK_angle, REACHABLE = IK(T_FK, DH_table)
-    
-    print("T_FK: ", T_FK)
+    # IK_angle, REACHABLE = IK(T_FK, DH_table)
+ 
+    # print("T_FK: ", T_FK)
     print("REACHABLE: ", REACHABLE)
     print("IK_angle: ", IK_angle)
 
-    if REACHABLE is True:
-        T_IK = FK_dh(IK_angle, DH_table)
+    # if REACHABLE is True:
+    #     T_IK = FK_dh(IK_angle, DH_table)
 
 
-        print("IK: ", np.rad2deg(IK_angle))
-        print("Difference of Joint angels: ", thetas - np.rad2deg(IK_angle[0:6]))
-        # print("T from FK: ", T_FK)
-        print("T from FK - IK: ", T_FK - T_IK)
-        print("Distance of End-effecter: ", T_FK[0:3,3] - T_IK[0:3,3])
-        print("Difference of Tool angles: ", (get_euler_angles_from_T(T_FK) - get_euler_angles_from_T(T_IK))*180/np.pi)
-    else:
-        print("GG")
+    #     print("IK: ", np.rad2deg(IK_angle))
+    #     print("Difference of Joint angels: ", thetas - np.rad2deg(IK_angle[0:6]))
+    #     # print("T from FK: ", T_FK)
+    #     print("T from FK - IK: ", T_FK - T_IK)
+    #     print("Distance of End-effecter: ", T_FK[0:3,3] - T_IK[0:3,3])
+    #     print("Difference of Tool angles: ", (get_euler_angles_from_T(T_FK) - get_euler_angles_from_T(T_IK))*180/np.pi)
+    # else:
+    #     print("GG")
 
  
 if __name__ == '__main__':
