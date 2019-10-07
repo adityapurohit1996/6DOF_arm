@@ -121,23 +121,7 @@ class StateMachine():
                
 
     """Functions run for each state"""
-    def rgb2world(self):
-        """ rotation(np.pi/2, "y")
-        Convert rgb points at mouse click into world coordinates 
-        """
-        x = self.kinect.last_click[0]
-        y = self.kinect.last_click[1]
-        world_frame = np.zeros((1,3))
-        #print("Click Coordinates",x,y)
-        if(self.kinect.currentDepthFrame.any() != 0):
-            z = self.kinect.currentDepthFrame[y][x]
-            #convert camera data to depth in mm
-            depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
-
-        world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
-        #To convert depth to IK convention
-        world_frame[2] = -world_frame[2] + 939
-        return world_frame
+    
 
     def constructPose(self,world_frame,theta,z):
         world_frame[2] += z
@@ -164,7 +148,9 @@ class StateMachine():
                     cube_click_points[i] = self.kinect.last_click.copy()
                     i = i + 1
                     self.kinect.new_click = False  
-                world_frame[j] = self.rgb2world()     
+                x = self.kinect.last_click[0]
+                y = self.kinect.last_click[1] 
+                world_frame[j] = self.kinect.rgb2world(x,y)     
         i = 0
         #=====================================================================================================
         print("World Frame Clicked",world_frame)
