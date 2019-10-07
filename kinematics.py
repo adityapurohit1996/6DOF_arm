@@ -177,6 +177,9 @@ def get_euler_angles_from_T(T):
         if(phi > np.pi):
             phi = phi -2*np.pi
 
+        if(psi > np.pi):
+            psi = psi -2*np.pi
+
         if(phi > 150*np.pi/180):
             print("phi > 150!!!")
             phi = phi - np.pi

@@ -25,6 +25,11 @@ class Rexarm():
         self.gripper_closed_pos = -0.9599
         self.gripper_state = True
         self.estop = False
+        self.Z0_offset = 10
+        self.cube_height = 60 #mm
+        self.prep_height = 60 #mm
+
+
         """TODO: Find the physical angle limits of the Rexarm. Remember to keep track of this if you include more motors"""
         safety_margim = 5
         self.angle_limits = np.array([
@@ -255,7 +260,6 @@ class Rexarm():
         print("DONE this pose!!")
 
     def set_gripper_position(self, gripper_position, update_now = True):
-        
         self.gripper_position = gripper_position
         if(update_now):
             self.gripper.set_position(gripper_position)
