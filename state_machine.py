@@ -259,7 +259,7 @@ class StateMachine():
                 isGrab = False
                 stack = 1
 
-            self.rexarm.grab_or_place_block(pose_of_block, 60, 40, stack, isGrab)
+            self.rexarm.grab_or_place_block(pose_of_block, 20, 40, stack, isGrab)
             '''
             
             pose = self.constructPose(world_frame[i],np.array([0,0,0]),self.z_offset)
