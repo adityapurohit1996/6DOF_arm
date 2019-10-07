@@ -69,7 +69,8 @@ class StateMachine():
             if(self.next_state == "BlockSlider"):
                 self.BlockSlider(1)
             if(self.next_state == "Pick_N_Stack"):
-                self.Pick_N_Stack(3)
+                stack_location = np.array([-100,-100,self.Z0_offset])
+                self.Pick_N_Stack(stack_location)
 
                 
         if(self.current_state == "estop"):
@@ -201,14 +202,14 @@ class StateMachine():
         self.set_next_state("idle")
         self.rexarm.get_feedback()
     
-    def Pick_N_Stack(self,numBlocks):
+    def Pick_N_Stack(self,numBlocks, stack_location):
         self.status_message = "State: Pick_N_Stack - Stacks cubes in a specified location"
         self.current_state = "Pick_N_Stack"
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
         self.rexarm.open_gripper()
         #Motion Planning
-        world_frame = self.clickCoordnates(3)
-        stack_location = np.array([-100,-100,self.Z0_offset])
+        pose_of_block
+        #world_frame = self.clickCoordnates(3)
         size = np.size(world_frame,0)
         '''
         new_plan = zeros((size*2,3))
@@ -219,16 +220,10 @@ class StateMachine():
             j+=2
         world_frame = new_plan  
         '''
-        theta = np.array([0,0,0])
         height_stack = self.Z0_offset
+
         for i in range(size):
-            '''60
-            print(height_stack)
-            print(world_frame)
-            print(world_frame[i])
-            print(stack_location)
-            print(np.stack((world_frame[i],stack_location)))
-            '''
+            self.rexarm.grab_or_place_block(pose_of_block, 40)
             self.Grab_Place(np.stack((world_frame[i],stack_location)), theta, height_stack)
             height_stack = height_stack+self.stack_step
         #Finished
