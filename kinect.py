@@ -47,6 +47,22 @@ class Kinect():
         """ block info """
         self.block_contours = np.array([])
 
+    def rgb2world(self,x,y):
+        """ 
+        Convert rgb points at mouse click into world coordinates 
+        """
+        world_frame = np.zeros((1,3))
+        #print("Click Coordinates",x,y)
+        if(self.kinect.currentDepthFrame.any() != 0):
+            z = self.kinect.currentDepthFrame[y][x]
+            #convert camera data to depth in mm
+            depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
+
+        world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
+        #To convert depth to IK convention
+        world_frame[2] = -world_frame[2] + 939
+        return world_frame
+
     def captureVideoFrame(self):
         """                      
         Capture frame from Kinect, format is 24bit RGB    
@@ -260,9 +276,9 @@ class Kinect():
             dist_min = np.argmin(dist)
             return colors[dist_min]
 
-    def DetectColor(self):
+    def detectColor(self):
         # Pass the contour points to get rgb/hsv points
-        contour_colors = list()
+        self.contour_colors = list()
         Contour_RGB = self.GetContourRGB(self.Contour_IC)
         #print(Contour_RGB)
 
@@ -271,10 +287,26 @@ class Kinect():
         if len(Contour_RGB) > 0:
             for rgb in Contour_RGB:
                 color = self.FindColor(rgb)
-                contour_colors.append(color)
+                self.contour_colors.append(color)
         #print(Contour_RGB)
-        print(contour_colors)
+        
         pass
+    
+    def findColorPosition(self,color) :
+        '''
+        Takes in color and returns world coordinates and orientation of the block of that color
+        '''
+        self.detectColor()
+        for i,ref in enumerate(self.contour_colors) :
+            if(ref == color) :
+                x = self.Contour_IC[i][0]
+                y = self.Contour_IC[i][1]
+                world_coordinates = self.rgb2world(x,y)
+                world_coordinates = np.append(world_coordinates,self.Contour_IC[i][2])
+                return world_coordinates
+        pass
+
+
         
 
 
@@ -308,7 +340,7 @@ class Kinect():
         for i,contour in enumerate(contours):
             area = cv2.contourArea(contour)
 
-            if area>2000 or area<100:
+            if area>2000 or area<500:
                 # contours.remove(contour)
                 pass
             else:
@@ -327,10 +359,9 @@ class Kinect():
 
                 # print(contour)
                 
-                    #TODO: Add angle if required
+                    
                     cv2.drawContours(I_th, contours, i,(128,128,128),10)
-
-                    rects.append([x,y,1])
+                    rects.append([x,y,rect[2]])
                 #masks.append(cv2.drawContours(mask, contours, i, 255, -1))
         #cv2.imshow('Depth', I_depth)
         
@@ -345,7 +376,7 @@ class Kinect():
         else :
             self.Contour_IC = list()
 
-        self.DetectColor()
+       # self.detectColor()
         return I_th
 
 
