@@ -114,7 +114,7 @@ class StateMachine():
             if(self.next_state == "idle"):
                 self.idle()
 
-        if(self.current_state == "Pick_N_Stack"):
+        if(self.current_state == "Pick_N_Stack"):       
             if(self.next_state == "idle"):
                 self.idle()
         
@@ -167,15 +167,22 @@ class StateMachine():
         self.rexarm.open_gripper()
         #Motion Planning
         # slidingCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100]])
-        slidingCoordinates = np.array([[120, 100],[100, 100], [100, -100],[-100, -100]])
+        slidingCoordinates = np.array([[-200, 200],[100, 100], [100, -100],[-100, -100]])
 
         pose = self.constructPose(np.append(slidingCoordinates[0],0),np.array([0,0,0]),self.z_offset - 55)
+        # pose = [slidingCoordinates[0][0],slidingCoordinates[0][1], 30, [np.pi/4, 0, 0]]
         #print(pose)
-        self.rexarm.set_pose(pose)
-        self.rexarm.pause(4)
+
+        grap_pose, prep_pose, isTOP = self.rexarm.check_fesible_IK(pose, 20, True)
+        print("grap_pose",grap_pose)
+
+        self.rexarm.set_pose(prep_pose)
+        self.rexarm.pause(2)
+        self.rexarm.set_pose(grap_pose)
+        self.rexarm.pause(2)
         print("frist pose: ", pose)
         
-        self.rexarm.interpolating_in_WS(pose[0:3,0:3], np.array([120,100,5]), np.array([120,-100,5]), 10)
+        self.rexarm.interpolating_in_WS(grap_pose[0:3,0:3], np.array([-200,200,30]), np.array([0,200,30]), 10)
 
         '''
         if(stack):
@@ -246,7 +253,13 @@ class StateMachine():
             pose_of_block = [world_frame[i][0],world_frame[i][1],world_frame[i][2], theta[i]]
             print("Point #", i)
             print(pose_of_block)
-            self.rexarm.grab_or_place_block(pose_of_block, 40)
+            
+            if(i%2 == 1):
+                isGrab = True
+            else:
+                isGrab = False
+
+            self.rexarm.grab_or_place_block(pose_of_block, 40, isGrab)
             '''
             
             pose = self.constructPose(world_frame[i],np.array([0,0,0]),self.z_offset)
@@ -310,13 +323,18 @@ class StateMachine():
         self.status_message = "State: TP_test - testing trajectory planner"
         self.current_state = "TP_test"
 
-        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
-                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
-                    [-1.0,-0.8,-1.0,-0.5, -1.0],
-                    [-1.0, 0.8, 1.0, 0.5, 1.0],
-                    [1.0, -0.8,-1.0,-0.5, -1.0],
-                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        # waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+        #             [ 1.0, 0.8, 1.0, 0.5, 1.0],
+        #             [-1.0,-0.8,-1.0,-0.5, -1.0],
+        #             [-1.0, 0.8, 1.0, 0.5, 1.0],
+        #             [1.0, -0.8,-1.0,-0.5, -1.0],
+        #             [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         
+        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 0.0, 0.0, 0.0],
+                    [ -1.0, 0.8, 0.0, 0.0, 0.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+
         max_speed = 1  # in radius/s
 
         # self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
@@ -332,7 +350,7 @@ class StateMachine():
 
             self.tp.execute_plan(plan, 10)
         
-        self.rexarm.set_speeds_normalized_global()
+        self.rexarm.set_speeds_normalized_global(0.25)
         self.set_next_state("idle")
 
     def execute(self):

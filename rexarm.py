@@ -32,7 +32,7 @@ class Rexarm():
                             [-25-90+safety_margim, 208-90-safety_margim],
                             [-110+safety_margim, 100-safety_margim],
                             [-150+safety_margim, 150-safety_margim],
-                            [-125+safety_margim, 120-safety_margim],
+                            [-100+safety_margim, 100-safety_margim],
                             [-150+safety_margim, 150-safety_margim]], dtype=np.float)*D2R
 
         """ Commanded Values """
@@ -124,9 +124,9 @@ class Rexarm():
             self.set_pose(T)
             self.pause(0.2) 
 
-    def check_fesible_IK(self, pose_of_block, delta_Z, desire_mode = "GRAB_FROM_TOP"):
-        X, Y, Z, theta = pose_of_block
-        theta = theta[0] # only use first z in zyz (right now)
+    def check_fesible_IK(self, pose_of_block, delta_Z, isGrab, desire_mode = "GRAB_FROM_TOP"):
+        X, Y, Z, angles = pose_of_block
+        theta = angles[0] # only use first z in zyz (right now)
 
         T_grab = np.identity(4)
         isTOP = False
@@ -139,7 +139,11 @@ class Rexarm():
             # checking if can grab from top
             T_grab[0,3] = X
             T_grab[1,3] = Y
-            T_grab[2,3] = Z
+
+            if(isGrab):
+                T_grab[2,3] = Z - 40 # cube height
+            else:
+                T_grab[2,3] = Z
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
             
             T_prep = np.copy(T_grab)
@@ -153,48 +157,74 @@ class Rexarm():
                 grap_pose = T_grab
                 prep_pose = T_prep
                 isTOP = True
-        print("isTOP: ", isTOP)
+            print("isTOP: ", isTOP)
 
-        if(not isTOP):
-            if(X >= 0):
-                if(Y >= 0):
-                    theta = theta
+            if(not isTOP):
+                if(X >= 0):
+                    if(Y >= 0):
+                        theta = theta
+                    else:
+                        theta = theta - np.pi/2
                 else:
-                    theta = theta - np.pi/2
-            else:
-                if(Y >= 0):
-                    theta = theta + np.pi/2
-                else:
-                    theta = theta + np.pi
+                    if(Y >= 0):
+                        theta = theta + np.pi/2
+                    else:
+                        theta = theta + np.pi
 
-            T_grab = np.dot(rotation(theta, "z"), rotation(np.pi/2, "y"))
+                T_grab = np.dot(rotation(theta, "z"), rotation(np.pi/2, "y"))
+                T_grab[0,3] = X
+                T_grab[1,3] = Y
+                T_grab[2,3] = Z -20 # Cube is about 40mm
+                _, REACHABLE_grab = IK(T_grab, self.DH_table)
+
+                T_prep = np.copy(T_grab)
+                T_prep[0,3] = X - delta_Z*np.cos(theta)
+                T_prep[1,3] = Y - delta_Z*np.sin(theta)
+                _, REACHABLE_side = IK(T_prep, self.DH_table)
+
+                print("From Horizon:")
+                print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_side)
+                    
+                if REACHABLE_grab and REACHABLE_side:
+                    grap_pose = T_grab
+                    prep_pose = T_prep
+                else:
+                    T_grab[:] = np.nan
+                    T_prep[:] = np.nan
+                    grap_pose = T_grab
+                    prep_pose = T_prep
+
+        elif(desire_mode == "ARB"):
+
+            T_grab = np.dot(np.dot(rotation(angles[0], "z"), rotation(angles[1], "y")),rotation(angles[2],"z"))
             T_grab[0,3] = X
             T_grab[1,3] = Y
-            T_grab[2,3] = Z+50
+            T_grab[2,3] = Z
+
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
 
             T_prep = np.copy(T_grab)
-            T_prep[0,3] = X - delta_Z*np.cos(theta)
-            T_prep[1,3] = Y - delta_Z*np.sin(theta)
-            _, REACHABLE_side = IK(T_grab, self.DH_table)
+            T_prep[0,3] = X - delta_Z*np.cos(angles[0])*np.cos(angles[1])
+            T_prep[1,3] = Y - delta_Z*np.sin(angles[0])*np.cos(angles[1])
+            T_prep[2,3] = Z - delta_Z*np.sin(angles[1])
+            _, REACHABLE_side = IK(T_prep, self.DH_table)
 
-            print("From Horizon:")
-            print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_above)
-                
             if REACHABLE_grab and REACHABLE_side:
                 grap_pose = T_grab
                 prep_pose = T_prep
             else:
                 T_grab[:] = np.nan
                 T_prep[:] = np.nan
+                grap_pose = T_grab
+                prep_pose = T_prep
 
-        return T_grab, T_prep, isTOP
+        return grap_pose, prep_pose, isTOP
 
-    def grab_or_place_block(self, pose_of_block, offset, desire_mode = "GRAB_FROM_TOP"):
+    def grab_or_place_block(self, pose_of_block, offset, isGrab, desire_mode = "GRAB_FROM_TOP"):
         '''
         pose_of_block: X, Y, Z, theta(z-axis)
         '''
-        T_grab, T_prep, isTOP = self.check_fesible_IK(pose_of_block,offset)
+        T_grab, T_prep, isTOP = self.check_fesible_IK(pose_of_block,offset, isGrab)
         
         print("Grab", T_grab)
         print("Prep", T_prep)
@@ -234,9 +264,13 @@ class Rexarm():
         joint_angles, isGOOD = IK(pose, self.DH_table)
         print("Joint angles from IK: ", joint_angles)
         # self.set_positions(joint_angles, update_now)
+        if(isGOOD):
+            self.set_positions(joint_angles[0:6], update_now)
+        else:
+            print("This doesn't achievable!!!")
+            print(pose)
+            print("=============")
 
-        self.set_positions(joint_angles[0:6], update_now)
-    
     def set_speeds_normalized_global(self, speed, update_now = True):
         for i,joint in enumerate(self.joints):
             self.speed[i] = speed
