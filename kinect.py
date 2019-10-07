@@ -53,12 +53,12 @@ class Kinect():
         """
         world_frame = np.zeros((1,3))
         #print("Click Coordinates",x,y)
-        if(self.kinect.currentDepthFrame.any() != 0):
-            z = self.kinect.currentDepthFrame[y][x]
+        if(self.currentDepthFrame.any() != 0):
+            z = self.currentDepthFrame[y][x]
             #convert camera data to depth in mm
             depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
 
-        world_frame = depth * np.dot(self.kinect.projection,[x,y,1])
+        world_frame = depth * np.dot(self.projection,[x,y,1])
         #To convert depth to IK convention
         world_frame[2] = -world_frame[2] + 939
         return world_frame
@@ -288,7 +288,7 @@ class Kinect():
             for rgb in Contour_RGB:
                 color = self.FindColor(rgb)
                 self.contour_colors.append(color)
-        #print(Contour_RGB)
+        #print(self.contour_colors)
         
         pass
     
@@ -299,10 +299,11 @@ class Kinect():
         self.detectColor()
         for i,ref in enumerate(self.contour_colors) :
             if(ref == color) :
-                x = self.Contour_IC[i][0]
-                y = self.Contour_IC[i][1]
+                x = int(self.Contour_IC[i][0])
+                y = int(self.Contour_IC[i][1])
                 world_coordinates = self.rgb2world(x,y)
                 world_coordinates = np.append(world_coordinates,self.Contour_IC[i][2])
+                print(world_coordinates)
                 return world_coordinates
         pass
 
@@ -377,6 +378,7 @@ class Kinect():
             self.Contour_IC = list()
 
        # self.detectColor()
+        #self.findColorPosition('Red')
         return I_th
 
 
