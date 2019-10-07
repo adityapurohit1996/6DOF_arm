@@ -16,8 +16,6 @@ class StateMachine():
         self.status_message = "State: Idle"
         self.current_state = "idle"
         self.next_state = "idle"
-        self.Z0_offset = 13 #mm
-        self.stack_step = 40 #mm
         self.z_offset = 60 #mm
         
 
@@ -64,12 +62,12 @@ class StateMachine():
                 theta = np.array([[0, 0, 0],[0, 0, 0]])
                 theta = np.deg2rad(theta)
                 world_frame = self.clickCoordnates(2)
-                z = self.Z0_offset #mm 
+                z = self.rexarm.Z0_offset #mm 
                 self.Grab_Place(world_frame,theta,z)
             if(self.next_state == "BlockSlider"):
                 self.BlockSlider(1)
             if(self.next_state == "Pick_N_Stack"):
-                stack_location = np.array([-100,-100,self.Z0_offset])
+                stack_location = np.array([-100,-100,self.rexarm.Z0_offset])
                 self.Pick_N_Stack(stack_location)
 
                 
@@ -188,7 +186,7 @@ class StateMachine():
         if(stack):
             pose[2][3] = 20
         else:
-            pose[2][3] = self.Z0_offset
+            pose[2][3] = self.rexarm.Z0_offset
 
         #print(pose)
         self.rexarm.set_pose(pose)
@@ -227,7 +225,7 @@ class StateMachine():
             j+=2
         world_frame = new_plan  
         '''
-        height_stack = self.Z0_offset
+        height_stack = self.rexarm.Z0_offset
 
         for i in range(size):
             self.rexarm.grab_or_place_block(pose_of_block, 40)
@@ -250,16 +248,18 @@ class StateMachine():
         size = np.size(world_frame,0)
         for i in range(size):
             
-            pose_of_block = [world_frame[i][0],world_frame[i][1],world_frame[i][2], theta[i]]
+            pose_of_block = [world_frame[i][0],world_frame[i][1],world_frame[i][2]+self.rexarm.Z0_offset, theta[i]]
             print("Point #", i)
             print(pose_of_block)
             
             if(i%2 == 1):
                 isGrab = True
+                stack = 0
             else:
                 isGrab = False
+                stack = 1
 
-            self.rexarm.grab_or_place_block(pose_of_block, 40, isGrab)
+            self.rexarm.grab_or_place_block(pose_of_block, 60, 40, stack, isGrab)
             '''
             
             pose = self.constructPose(world_frame[i],np.array([0,0,0]),self.z_offset)
@@ -267,7 +267,7 @@ class StateMachine():
             self.rexarm.set_pose(pose)
             self.rexarm.pause(4)
             if (i % 2) == 0 | i==0:
-                pose[2][3] = self.Z0_offset
+                pose[2][3] = self.rexarm.Z0_offset
             else:
                 pose[2][3] = z
             #print(pose)
