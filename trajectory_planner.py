@@ -76,7 +76,7 @@ class TrajectoryPlanner():
         return plan   
         
 
-    def execute_plan(self, plan, look_ahead=8):
+    def execute_plan(self, plan, TP, look_ahead=8):
         plan_q = plan[0]
         plan_v = plan[1]    # velocity in radius/s     row=time_step, col=join#
 
@@ -90,19 +90,24 @@ class TrajectoryPlanner():
 
 
         # self.rexarm.set_positions(plan_q[-1])
-        Record_joints = np.array((len(plan_v, 6)))
+        Record_joints = np.zeros((len(plan_v),5))
+        # print(len(Record_joints))
 
         for i in range(len(plan_v)):
-            if i > len(plan_v)-look_ahead-1:
-                # self.rexarm.set_speeds(plan_v[-1])
-                self.rexarm.set_positions(plan_q[-1])
+            if(TP):
+                if i > len(plan_v)-look_ahead-1:
+                    # self.rexarm.set_speeds(plan_v[-1])
+                    self.rexarm.set_positions(plan_q[-1])
+                else:
+                    # self.rexarm.set_speeds(plan_v[i+look_ahead])
+                    self.rexarm.set_positions(plan_q[i+look_ahead])
+                
+                self.rexarm.set_speeds(plan_v[i])
             else:
-                # self.rexarm.set_speeds(plan_v[i+look_ahead])
-                self.rexarm.set_positions(plan_q[i+look_ahead])
-            
-            self.rexarm.set_speeds(plan_v[i])
-
-            Record_joints[i] = list(self.rexarm.get_positions())
+                self.rexarm.set_positions(plan_q[-1])
+            Record_joints[i] = self.rexarm.get_positions()
+            # print(self.rexarm.get_positions())
             self.rexarm.pause(self.dt)
 
+        # print(Record_joints)
         return Record_joints

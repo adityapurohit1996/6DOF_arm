@@ -329,17 +329,23 @@ class StateMachine():
                     [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         
         waypoints_hori = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
-                    [ 1.0, 0.8, 0.0, 0.0, 0.0],
-                    [ -1.0, 0.8, 0.0, 0.0, 0.0],
+                    [ 1.5, 0.8, 0.5, -1, 0.5],
+                    [ -1.5, 0.8, 0.5, 1, 0.5],
                     [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         
         waypoints = waypoints_def
+        waypoints = waypoints_hori
 
         # in radius/s
-        max_speed = 1  # in radius/s
-        # max_speed = 5
+        max_speed = 0.5  # in radius/s
+        max_speed = 4
 
-        # self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
+        TP = True
+        TP = False
+
+        if(TP is False):
+            # self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
+            self.rexarm.set_speeds(np.ones((6,1))*max_speed)
 
         for i in range(len(waypoints) - 1):
             self.tp.set_initial_wp(waypoints[i])
@@ -347,25 +353,27 @@ class StateMachine():
             T = self.tp.calc_time_from_waypoints(max_speed)
            # print(T)
             
-            if i == 1:
+            if i == 0:
                 plan = self.tp.generate_cubic_spline(T)
                 Record_qd = plan[0]
                 Record_vd = plan[1]
             else:
                 plan = self.tp.generate_cubic_spline(T)
-                Record_qd.append(plan[0])
-                Record_vd.append(plan[1])
+                Record_qd = np.concatenate((Record_qd,plan[0]), axis=0)
+                Record_vd = np.concatenate((Record_vd,plan[1]), axis=0)
 
-            if i == 1:
-                Record_joints = self.tp.execute_plan(plan, 10)
+            if i == 0:
+                Record_joints = self.tp.execute_plan(plan,TP, 10)
             else:
-                Record_joints.append(self.tp.execute_plan(plan, 10))
+                Record_joints = np.concatenate((Record_joints,self.tp.execute_plan(plan,TP, 10)), axis=0)
+
+            print(len(Record_joints))
 
         Record_dict = {}
         Record_dict['qd'] = Record_qd
         Record_dict['vd'] = Record_vd
         Record_dict['joints'] = Record_joints
-        sio.savemat('..\TP_Record.mat', Record_dict)
+        sio.savemat('TP_record/TP_Record.mat', Record_dict)
         
         self.rexarm.set_speeds_normalized_global(0.25)
         self.set_next_state("idle")
