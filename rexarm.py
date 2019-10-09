@@ -21,12 +21,12 @@ class Rexarm():
         self.waypoints_recorded = []
         self.joints = joints
         self.gripper = gripper
-        self.gripper_open_pos = 0.5759
-        self.gripper_closed_pos = -0.9599
+        self.gripper_open_pos = -0.3
+        self.gripper_closed_pos = self.gripper_open_pos + np.pi/2
         self.gripper_state = True
         self.estop = False
         self.Z0_offset = 10
-        self.cube_height = 60 #mm
+        self.cube_height = 40 #mm
         self.prep_height = 60 #mm
 
 

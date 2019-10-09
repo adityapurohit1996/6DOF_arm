@@ -276,7 +276,21 @@ class Kinect():
             dist_min = np.argmin(dist)
             return colors[dist_min]
 
-    def detectColor(self):
+    def FindColor_RGB(self,rgb):
+        dist=np.zeros(3)
+        RED = np.array([255,0,0])
+        GREEN = np.array([0,255,0])
+        BLUE = np.array([0,0,255])
+        colors =['Red','Green','Blue']
+        colors_array = np.array([ RED,GREEN,BLUE])
+        for iter,i in enumerate(colors_array):
+            dist[iter] = np.linalg.norm(i-rgb)
+           # print(dist)
+        if dist.any() != 0:
+            dist_min = np.argmin(dist)
+            return colors[dist_min]
+
+    def detectColor(self,RGB):
         # Pass the contour points to get rgb/hsv points
         self.contour_colors = list()
         Contour_RGB = self.GetContourRGB(self.Contour_IC)
@@ -286,17 +300,21 @@ class Kinect():
        # print(len(Contour_RGB))
         if len(Contour_RGB) > 0:
             for rgb in Contour_RGB:
-                color = self.FindColor(rgb)
-                self.contour_colors.append(color)
-        #print(self.contour_colors)
+                if RGB :
+                    color = self.FindColor_RGB(rgb)
+                    self.contour_colors.append(color)
+                else :
+                    color = self.FindColor(rgb)
+                    self.contour_colors.append(color)
+        print(self.contour_colors)
         
         pass
     
-    def findColorPosition(self,color) :
+    def findColorPosition(self,color,RGB=False) :
         '''
         Takes in color and returns world coordinates and orientation of the block of that color
         '''
-        self.detectColor()
+        self.detectColor(RGB)
         for i,ref in enumerate(self.contour_colors) :
             if(ref == color) :
                 x = int(self.Contour_IC[i][0])
@@ -327,7 +345,7 @@ class Kinect():
             bounding_rgb[i,:] = rgb
        '''
         ROI[100:460,146:490] = I_depth[100:460,146:490]
-        ROI[200:340,250:360] = 0
+        ROI[185:320,270:370] = 0
         
         ret, I_th = cv2.threshold(ROI, 200, 255, cv2.THRESH_BINARY_INV)
         I_th = cv2.blur(I_th, (7,7))
@@ -377,7 +395,7 @@ class Kinect():
         else :
             self.Contour_IC = list()
 
-       # self.detectColor()
+        #self.detectColor(0)
         #self.findColorPosition('Red')
         return I_th
 

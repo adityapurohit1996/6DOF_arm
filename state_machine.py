@@ -69,16 +69,17 @@ class StateMachine():
                 self.BlockSlider()
 
             if(self.next_state == "Pick_N_Stack"):
-                stack_location = np.array([-100,125,self.rexarm.Z0_offset])
-                colors = ['Red','Pink','Blue']
-                self.Pick_N_Stack(stack_location,1,colors)
+                stack_location = np.array([-150,-150,self.rexarm.Z0_offset])
+                colors = ['Red','Green','Blue']
+                self.Pick_N_Stack(stack_location,1,colors,1)
 
             if(self.next_state == "Line_M_Up"):
-                stack_location = np.array([-100,100,self.rexarm.Z0_offset])
-                colors = ['Black', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Violet', 'Pink']
+                stack_location = np.array([-150,150,self.rexarm.Z0_offset])
+                colors = ['Black', 'Red', 'Orange', 'Yellow', 'Green', 'Blue']
+                #colors = ['Orange']
                 #self.Line_M_Up(stack_location,0,colors)
                 stack = 0
-                self.Pick_N_Stack(stack_location, stack, colors)
+                self.Pick_N_Stack(stack_location, stack, colors,0)
 
                 
         if(self.current_state == "estop"):
@@ -231,7 +232,7 @@ class StateMachine():
         #Motion Planning
         self.Pick_N_Stack(stack_location, stack, colors)
     '''
-    def Pick_N_Stack(self, stack_location, stack, colors):
+    def Pick_N_Stack(self, stack_location, stack, colors,isRGB):
         self.status_message = "State: Pick_N_Stack - Stacks cubes in a specified location"
         self.current_state = "Pick_N_Stack"
         self.rexarm.set_speeds_normalized_global(0.05,update_now=True)
@@ -244,9 +245,15 @@ class StateMachine():
 
         for i in range(size):
             if(i>0):
-                stack_location = self.kinect.findColorPosition(colors[i-1])
+                temp = self.kinect.findColorPosition(colors[i-1],isRGB)
+                print('Stack location',stack_location)
+                '''
+                if type(temp) != None :
+                    stack_location = temp
+                '''
                 stack_location = stack_location[0:3]
-            pose_grab = self.kinect.findColorPosition(colors[i])
+            pose_grab = self.kinect.findColorPosition(colors[i],isRGB)
+            print('Grab location',stack_location)
             print('Block Detect',pose_grab)
             '''
             print(pose_grab[0:3])
@@ -258,8 +265,8 @@ class StateMachine():
             if(stack==1):
                 z_place += self.rexarm.cube_height
             else:
-                z_place = self.rexarm.Z0_offset
-                stack_location[0] += 15 #mm
+                z_place = self.rexarm.Z0_offset+45
+                stack_location[0] += 45 #mm
         #Finished
         for joint in self.rexarm.joints:
             joint.set_position(0.0)
@@ -295,7 +302,7 @@ class StateMachine():
             print(phi*180/np.pi)
 
             pose_top = self.constructPose(world_frame[i],np.array([phi, np.pi,0]), 20)
-            pose_45 = self.constructPose(world_frame[i], np.array([phi, np.pi*3/4, 0]), 20)
+            pose_45 = self.constructPose(world_frame[i]+np.array([10*np.cos(phi), 10*np.sin(phi), 0]), np.array([phi, np.pi*3/4, 0]), 20)
             #pose_45 = self.constructPose(world_frame[i], np.array([phi, np.pi*5/6, 0]), 20)
             # print(pose)
 
@@ -320,13 +327,18 @@ class StateMachine():
                 pose[2][3] = z_place
             #print(pose)
 
-            pose[2][3] += self.rexarm.prep_height 
+            pose[2][3] += self.rexarm.prep_height
             self.rexarm.set_pose(pose)
             self.rexarm.pause(3)
-            pose[2][3] -= self.rexarm.prep_height 
+            pose[2][3] -= self.rexarm.prep_height/2 
+            self.rexarm.set_pose(pose)
+            self.rexarm.pause(3)
+
+
+            pose[2][3] -= self.rexarm.prep_height/2
             
             self.rexarm.set_pose(pose)
-            self.rexarm.pause(3)
+            self.rexarm.pause(2)
 
             if (i % 2) == 0 | i==0:
                 self.rexarm.close_gripper()
@@ -470,6 +482,7 @@ class StateMachine():
         self.current_state = "manual"
         self.rexarm.send_commands()
         self.rexarm.get_feedback()
+        print(self.rexarm.gripper.get)
 
     def idle(self):
         self.status_message = "State: Idle - Waiting for input"
