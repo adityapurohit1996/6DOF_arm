@@ -41,10 +41,27 @@ class Kinect():
         
         """ Extra arrays for colormaping the depth image"""
         self.DepthHSV = np.zeros((480,640,3)).astype(np.uint8)
+        self.Contour_IC = list()
         self.DepthCM=np.array([])
 
         """ block info """
         self.block_contours = np.array([])
+
+    def rgb2world(self,x,y):
+        """ 
+        Convert rgb points at mouse click into world coordinates 
+        """
+        world_frame = np.zeros((1,3))
+        #print("Click Coordinates",x,y)
+        if(self.currentDepthFrame.any() != 0):
+            z = self.currentDepthFrame[y][x]
+            #convert camera data to depth in mm
+            depth = 1000* 0.1236 * np.tan(z/2842.5 + 1.1863)
+
+        world_frame = depth * np.dot(self.projection,[x,y,1])
+        #To convert depth to IK convention
+        world_frame[2] = -world_frame[2] + 939
+        return world_frame
 
     def captureVideoFrame(self):
         """                      
@@ -231,13 +248,70 @@ class Kinect():
         # return (x, y, theta)
 
       '''  
+    def GetContourRGB(self,contour_points):
+        Contour_RGB=list()
+        for point in contour_points:
+            #print(point)
+            x= int(point[1])
+            y= int(point[0])  
+            RGB = np.array([self.currentVideoFrame[x][y][0],self.currentVideoFrame[x][y][1],self.currentVideoFrame[x][y][2]])
+            Contour_RGB.append(RGB)
+        return Contour_RGB
+            
+    def FindColor(self,rgb):
+        dist=np.zeros(7)
+        BLACK = np.array([60, 60 , 60])
+        ORANGE = np.array([250, 80 , 16])
+        YELLOW = np.array([250, 250 , 230])
+        RED = np.array([180, 15 , 50])
+        GREEN = np.array([85,145, 90])
+        BLUE = np.array([90,100,160])
+        PURPLE = np.array([130, 70 , 145])
+        colors =['Black','Orange','Yellow','Red','Green','Blue','Purple']
+        colors_array = np.array([BLACK,ORANGE,YELLOW, RED,GREEN,BLUE, PURPLE])
+        for iter,i in enumerate(colors_array):
+            dist[iter] = np.linalg.norm(i-rgb)
+           # print(dist)
+        if dist.any() != 0:
+            dist_min = np.argmin(dist)
+            return colors[dist_min]
+
+    def detectColor(self):
+        # Pass the contour points to get rgb/hsv points
+        self.contour_colors = list()
+        Contour_RGB = self.GetContourRGB(self.Contour_IC)
+        #print(Contour_RGB)
+
+        #Pass the contour RGB/HSV to identify color
+       # print(len(Contour_RGB))
+        if len(Contour_RGB) > 0:
+            for rgb in Contour_RGB:
+                color = self.FindColor(rgb)
+                self.contour_colors.append(color)
+        #print(self.contour_colors)
+        
+        pass
+    
+    def findColorPosition(self,color) :
+        '''
+        Takes in color and returns world coordinates and orientation of the block of that color
+        '''
+        self.detectColor()
+        for i,ref in enumerate(self.contour_colors) :
+            if(ref == color) :
+                x = int(self.Contour_IC[i][0])
+                y = int(self.Contour_IC[i][1])
+                world_coordinates = self.rgb2world(x,y)
+                world_coordinates = np.append(world_coordinates,self.Contour_IC[i][2])
+                print(world_coordinates)
+                return world_coordinates
+        pass
+
+
+        
+
 
     def detectBlocksInDepthImage(self):
-        """
-        TODO:
-        Implement a blob detector to find blocks
-        in the depth image
-        """
         I_depth = self.currentDepthFrame
         #print(I_depth.shape)
         ROI = np.zeros((I_depth.shape[0], I_depth.shape[1]),np.uint8)
@@ -253,7 +327,7 @@ class Kinect():
             bounding_rgb[i,:] = rgb
        '''
         ROI[100:460,146:490] = I_depth[100:460,146:490]
-        ROI[230:320,270:370] = 255
+        ROI[200:340,250:360] = 0
         
         ret, I_th = cv2.threshold(ROI, 200, 255, cv2.THRESH_BINARY_INV)
         I_th = cv2.blur(I_th, (7,7))
@@ -267,7 +341,7 @@ class Kinect():
         for i,contour in enumerate(contours):
             area = cv2.contourArea(contour)
 
-            if area>2000 or area<100:
+            if area>2000 or area<500:
                 # contours.remove(contour)
                 pass
             else:
@@ -286,9 +360,9 @@ class Kinect():
 
                 # print(contour)
                 
-
-                    cv2.drawContours(mask, contours, i, 255, -1)
-                    rects.append(rect)
+                    
+                    cv2.drawContours(I_th, contours, i,(128,128,128),10)
+                    rects.append([x,y,rect[2]])
                 #masks.append(cv2.drawContours(mask, contours, i, 255, -1))
         #cv2.imshow('Depth', I_depth)
         
@@ -298,11 +372,14 @@ class Kinect():
         #cv2.imshow('mask 1', masks[0])
         #cv2.imshow('mask 2', masks[1])
         if rects :
-          # print(rects)
-          pass
+           self.Contour_IC = rects
+           #print(self.Contour_IC)
+        else :
+            self.Contour_IC = list()
 
-
-        return mask
+       # self.detectColor()
+        #self.findColorPosition('Red')
+        return I_th
 
 
 '''
