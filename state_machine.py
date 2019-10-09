@@ -2,6 +2,7 @@ import time
 import cv2
 import numpy as np
 from kinematics import *
+import scipy.io as sio
 
 waypoints_recorded = []
 """
@@ -178,45 +179,37 @@ class StateMachine():
         self.current_state = "Grab_Place"
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
         self.rexarm.open_gripper()
-        #Motion Planning
-        # slidingCoordinates = np.array([[-100, 100],[100, 100], [100, -100],[-100, -100]])
-        slidingCoordinates = np.array([[-200, 200],[100, 100], [100, -100],[-100, -100]])
-
-        pose = self.constructPose(np.append(slidingCoordinates[0],0),np.array([0,0,0]),self.z_offset - 55)
-        # pose = [slidingCoordinates[0][0],slidingCoordinates[0][1], 30, [np.pi/4, 0, 0]]
-        #print(pose)
-
-        grap_pose, prep_pose, isTOP = self.rexarm.check_fesible_IK(pose, 20, True)
-        print("grap_pose",grap_pose)
-
-        self.rexarm.set_pose(prep_pose)
-        self.rexarm.pause(2)
-        self.rexarm.set_pose(grap_pose)
-        self.rexarm.pause(2)
-        print("frist pose: ", pose)
         
-        self.rexarm.interpolating_in_WS(grap_pose[0:3,0:3], np.array([-200,200,30]), np.array([0,200,30]), 10)
+        #Motion Planning
+        Slid_Positions = np.array([[-200, 200, 20], [0, 200, 20], 
+                                   [200, 200, 20], [200, 0, 20],
+                                   [200, -200, 20], [0, -200, 20],
+                                   [-200, 200, 20], [-200, 0, 20],
+                                   [-200,200,20]])
+        
+        Slid_Orientations = np.array([[np.pi*3/4, np.pi*3/4,0], [np.pi/4, np.pi*3/4,0],
+                                      [np.pi/4, np.pi*3/4, 0], [-np.pi/4, np.pi*3/4, 0],
+                                      [-np.pi/4, np.pi*3/4, 0], [-np.pi*3/4, np.pi*3/4, 0],
+                                      [-np.pi*3/4, np.pi*3/4, 0], [np.pi*3/4, np.pi*3/4, 0] ])
 
-        '''
-        if(stack):
-            pose[2][3] = 20
-        else:
-            pose[2][3] = self.Z0_offset
+        
+        for i in range(len(Slid_Positions)-1):
+            pose = Slid_Positions[i].append(Slid_Orientations[i])
+            grap_pose, prep_pose, isTOP = self.rexarm.check_fesible_IK(pose, 20, False, "ARB")
+            print("grap_pose",grap_pose[0,0])
 
-        #print(pose)
-        self.rexarm.set_pose(pose)
-        self.rexarm.pause(3)
-        self.rexarm.close_gripper()
-        self.rexarm.pause(2)
-        size = np.size(slidingCoordinates,0)
-        for i in range(size-1):
-            pose[0:2,3] = slidingCoordinates[i+1]
-            self.rexarm.set_pose(pose)
-            self.rexarm.pause(3)
-            #print(pose)
-        self.rexarm.open_gripper()
-        #self.rexarm.pause(1)
-        '''
+            self.rexarm.set_pose(prep_pose)
+            self.rexarm.pause(2)
+            self.rexarm.set_pose(grap_pose)
+            self.rexarm.pause(1)
+            self.rexarm.toggle_gripper()
+       
+            self.rexarm.interpolating_in_WS(grap_pose[0:3,0:3], Slid_Positions[i], Slid_Positions[i+1], 10)
+            self.rexarm.toggle_gripper()
+            
+            self.rexarm.joints[1].set_position(0)
+            self.rexarm.joints[2].set_position(0)
+
 
         #Finished
         self.set_next_state("idle")
@@ -342,19 +335,23 @@ class StateMachine():
         self.status_message = "State: TP_test - testing trajectory planner"
         self.current_state = "TP_test"
 
-        # waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
-        #             [ 1.0, 0.8, 1.0, 0.5, 1.0],
-        #             [-1.0,-0.8,-1.0,-0.5, -1.0],
-        #             [-1.0, 0.8, 1.0, 0.5, 1.0],
-        #             [1.0, -0.8,-1.0,-0.5, -1.0],
-        #             [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        waypoints_def = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
+                    [-1.0,-0.8,-1.0,-0.5, -1.0],
+                    [-1.0, 0.8, 1.0, 0.5, 1.0],
+                    [1.0, -0.8,-1.0,-0.5, -1.0],
+                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         
-        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+        waypoints_hori = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
                     [ 1.0, 0.8, 0.0, 0.0, 0.0],
                     [ -1.0, 0.8, 0.0, 0.0, 0.0],
                     [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        
+        waypoints = waypoints_def
 
+        # in radius/s
         max_speed = 1  # in radius/s
+        # max_speed = 5
 
         # self.rexarm.set_speeds_normalized_global(max_speed/12.2595,update_now=True)
 
@@ -363,11 +360,26 @@ class StateMachine():
             self.tp.set_final_wp(waypoints[i+1])
             T = self.tp.calc_time_from_waypoints(max_speed)
            # print(T)
-            plan = self.tp.generate_cubic_spline(T)
+            
+            if i == 1:
+                plan = self.tp.generate_cubic_spline(T)
+                Record_qd = plan[0]
+                Record_vd = plan[1]
+            else:
+                plan = self.tp.generate_cubic_spline(T)
+                Record_qd.append(plan[0])
+                Record_vd.append(plan[1])
 
-            # print(plan[0][-1])
+            if i == 1:
+                Record_joints = self.tp.execute_plan(plan, 10)
+            else:
+                Record_joints.append(self.tp.execute_plan(plan, 10))
 
-            self.tp.execute_plan(plan, 10)
+        Record_dict = {}
+        Record_dict['qd'] = Record_qd
+        Record_dict['vd'] = Record_vd
+        Record_dict['joints'] = Record_joints
+        sio.savemat('..\TP_Record.mat', Record_dict)
         
         self.rexarm.set_speeds_normalized_global(0.25)
         self.set_next_state("idle")

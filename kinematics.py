@@ -158,8 +158,8 @@ def get_euler_angles_from_T(T):
 
     # by lecture 3 p20
     r33 = R[2,2]
-    
-    if(abs(r33-1)<=0.1 or abs(r33-1)<=0.1):
+
+    if(abs(r33-1)<=0.01 or abs(r33-1)<=0.01):
         theta = 0
         phi = np.arctan2(R[1,0], R[0,0])/2
         psi = phi
@@ -177,20 +177,24 @@ def get_euler_angles_from_T(T):
         if(phi > np.pi):
             phi = phi -2*np.pi
 
-        if(phi > 150*np.pi/180):
-            print("phi > 150!!!")
+        if(psi > np.pi):
+            psi = psi -2*np.pi
+
+        if(phi > 100*np.pi/180):
+            print("phi > 100!!!")
             phi = phi - np.pi
             theta = -theta
             # psi = -psi 
-        elif(phi < -150*np.pi/180):
-            print("phi < -150!!!")
+        elif(phi < -100*np.pi/180):
+            print("phi < -100!!!")
             phi = phi + np.pi
             theta = -theta
             # psi = -psi 
- 
-        if(psi > 150*np.pi/180):
+        
+        # print("psi:  ", psi)
+        if(psi > 100*np.pi/180):
             psi = psi - np.pi
-        elif(psi < -150*np.pi/180):
+        elif(psi < -100*np.pi/180):
             psi = psi + np.pi
 
     phi = clamp_if_close_to_angle(phi)
@@ -277,14 +281,21 @@ def test():
     thetas = np.array([th1, th2, th3, th4, th5, th6])
     joint_angles = np.radians(thetas)
     
-
-    pose = [200, 200, 20, [np.pi/4, 0, 0]]
     Rexarm = rexarm.Rexarm([0],0 )
-    grap_pose, prep_pose, isTOP = Rexarm.check_fesible_IK(pose, 20, False)
+
+    pose = [-200, 200, 50, [np.pi/4 + np.pi/2, np.pi*3/4, 0]]
+    grap_pose, prep_pose, isTOP = Rexarm.check_fesible_IK(pose, 20, False,"ARB")
     print("grap_pose", grap_pose)
     print("prep_pose", prep_pose)
 
-    IK_angle, REACHABLE = IK(grap_pose, DH_table)
+    Rexarm.interpolating_in_WS(grap_pose[0:3,0:3], np.array([-200,200,20]), np.array([0,200,20]), 10)
+
+    print("\n\nChange Grab POSE!!!\n\n")
+
+    pose = [0, 200, 50, [np.pi/4, np.pi*3/4, 0]]
+    grap_pose, prep_pose, isTOP = Rexarm.check_fesible_IK(pose, 20, False,"ARB")
+    # print grap_pose
+    Rexarm.interpolating_in_WS(grap_pose[0:3,0:3], np.array([0,200,20]), np.array([200,200,20]), 10)
 
 
     # T_FK = FK_dh(joint_angles, DH_FK)
@@ -292,9 +303,9 @@ def test():
     
     # IK_angle, REACHABLE = IK(T_FK, DH_table)
  
-    # print("T_FK: ", T_FK)
-    print("REACHABLE: ", REACHABLE)
-    print("IK_angle: ", IK_angle)
+    # # print("T_FK: ", T_FK)
+    # print("REACHABLE: ", REACHABLE)
+    # print("IK_angle: ", IK_angle)
 
     # if REACHABLE is True:
     #     T_IK = FK_dh(IK_angle, DH_table)

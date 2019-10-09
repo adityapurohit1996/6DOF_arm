@@ -117,12 +117,54 @@ class Rexarm():
         T = np.identity(4)
         T[0:3,0:3] = orientation
 
+        previous_joint = np.zeros((6,1))
+
         for position in path:
             print(position)
             T[0:3,3] = position
-            print(T)
-            self.set_pose(T)
+
+
+            joints, GOOD = IK(T, self.DH_table)
+            print("GOOD: ", GOOD)
+            # print(T)
+            self.set_positions(joints)
             self.pause(0.2) 
+            
+            change_pose = False
+
+            for i in range(6):
+                if(joints[i]*previous_joint[i]<0):
+                    change_pose = True
+                    print("which: ", i)
+            
+            if(change_pose):
+                print("======= CHANGing POSE ==========")
+                print(" ")
+                self.toggle_gripper()
+                
+                previous_joint[2] = 0
+                print("UP!! joint: ", previous_joint)
+                self.set_positions(previous_joint)
+
+                theta3 = joints[2]
+                joints[2] = 0
+                print("Rotate!! joint: ", joints)
+                self.joints[4].set_position(theta5)
+
+                joints[2] = theta3
+                print("Down!!!  joint: ", joints)
+
+                self.toggle_gripper()
+                print("======= Changing DONE =========")
+            else:
+                # self.set_positions(joints)
+
+                # print("Previous: ", previous_joint)
+                print("joint: ", joints)
+
+
+            previous_joint = joints.copy()
+
 
     def check_fesible_IK(self, pose_of_block, delta_Z, isGrab, desire_mode = "GRAB_FROM_TOP"):
         X, Y, Z, angles = pose_of_block
@@ -195,8 +237,9 @@ class Rexarm():
                     prep_pose = T_prep
 
         elif(desire_mode == "ARB"):
+            theta = angles[0]
 
-            T_grab = np.dot(np.dot(rotation(angles[0], "z"), rotation(angles[1], "y")),rotation(angles[2],"z"))
+            T_grab = np.dot(np.dot(rotation(theta, "z"), rotation(angles[1], "y")),rotation(angles[2],"z"))
             T_grab[0,3] = X
             T_grab[1,3] = Y
             T_grab[2,3] = Z
@@ -204,14 +247,16 @@ class Rexarm():
             _, REACHABLE_grab = IK(T_grab, self.DH_table)
 
             T_prep = np.copy(T_grab)
-            T_prep[0,3] = X - delta_Z*np.cos(angles[0])*np.cos(angles[1])
-            T_prep[1,3] = Y - delta_Z*np.sin(angles[0])*np.cos(angles[1])
+            T_prep[0,3] = X - delta_Z*np.cos(theta)*np.cos(angles[1])
+            T_prep[1,3] = Y - delta_Z*np.sin(theta)*np.cos(angles[1])
             T_prep[2,3] = Z - delta_Z*np.sin(angles[1])
             _, REACHABLE_side = IK(T_prep, self.DH_table)
 
+            print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_side)
             if REACHABLE_grab and REACHABLE_side:
                 grap_pose = T_grab
                 prep_pose = T_prep
+                print("WHY??")
             else:
                 T_grab[:] = np.nan
                 T_prep[:] = np.nan

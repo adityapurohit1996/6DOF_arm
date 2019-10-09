@@ -90,6 +90,7 @@ class TrajectoryPlanner():
 
 
         # self.rexarm.set_positions(plan_q[-1])
+        Record_joints = np.array((len(plan_v, 6)))
 
         for i in range(len(plan_v)):
             if i > len(plan_v)-look_ahead-1:
@@ -101,4 +102,7 @@ class TrajectoryPlanner():
             
             self.rexarm.set_speeds(plan_v[i])
 
+            Record_joints[i] = list(self.rexarm.get_positions())
             self.rexarm.pause(self.dt)
+
+        return Record_joints
