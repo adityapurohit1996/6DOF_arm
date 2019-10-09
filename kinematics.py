@@ -181,21 +181,31 @@ def get_euler_angles_from_T(T):
             psi = psi -2*np.pi
 
         if(phi > 100*np.pi/180):
-            print("phi > 100!!!")
+            # print("phi > 100!!! phi= ", phi)
             phi = phi - np.pi
             theta = -theta
+
+            # print("phi -np.pi = ", phi)
+            # print()
             # psi = -psi 
         elif(phi < -100*np.pi/180):
-            print("phi < -100!!!")
+            # print("phi < -100!!!")
             phi = phi + np.pi
             theta = -theta
             # psi = -psi 
         
         # print("psi:  ", psi)
         if(psi > 100*np.pi/180):
+            # print("psi > 100!!! psi= ", psi)
             psi = psi - np.pi
+            # print("psi -np.pi = ", psi)
+            # print()
+
         elif(psi < -100*np.pi/180):
+            # print("psi > 100!!! psi= ", psi)
             psi = psi + np.pi
+            # print("psi -np.pi = ", psi)
+            # print()
 
     phi = clamp_if_close_to_angle(phi)
     theta = clamp_if_close_to_angle(theta)

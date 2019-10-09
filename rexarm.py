@@ -127,8 +127,9 @@ class Rexarm():
             joints, GOOD = IK(T, self.DH_table)
             print("GOOD: ", GOOD)
             # print(T)
-            self.set_positions(joints)
-            self.pause(0.2) 
+            # self.set_positions(joints)
+            # self.set_pose(T)
+            # self.pause(0.2) 
             
             change_pose = False
 
@@ -141,27 +142,36 @@ class Rexarm():
                 print("======= CHANGing POSE ==========")
                 print(" ")
                 self.toggle_gripper()
+                self.pause(1.5)
                 
                 previous_joint[2] = 0
                 print("UP!! joint: ", previous_joint)
                 self.set_positions(previous_joint)
+                self.pause(1)
 
                 theta3 = joints[2]
                 joints[2] = 0
                 print("Rotate!! joint: ", joints)
-                self.joints[4].set_position(theta5)
+                self.set_positions(joints)
+                self.pause(2)
 
                 joints[2] = theta3
                 print("Down!!!  joint: ", joints)
+                self.set_positions(joints)
+                self.pause(1.5)
 
                 self.toggle_gripper()
+                self.pause(1.5)
+
+                self.joints[5].set_position(1.167)
                 print("======= Changing DONE =========")
             else:
-                # self.set_positions(joints)
+                print("GOGO")
+                print("joint: ", joints)
+                self.set_positions(joints)
 
                 # print("Previous: ", previous_joint)
-                print("joint: ", joints)
-
+            self.pause(0.2)
 
             previous_joint = joints.copy()
 

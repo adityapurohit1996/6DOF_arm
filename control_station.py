@@ -111,6 +111,7 @@ class Gui(QMainWindow):
         """Objects Using Other Classes"""
         self.kinect = Kinect()
         self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2,wrst3),gripper)
+        # self.rexarm = Rexarm((base,shld,elbw,wrst,wrst2))
         self.tp = TrajectoryPlanner(self.rexarm)
         self.sm = StateMachine(self.rexarm, self.tp, self.kinect)
     

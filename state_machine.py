@@ -180,7 +180,7 @@ class StateMachine():
 
         
         for i in range(len(Slid_Positions)-1):
-            pose = Slid_Positions[i].append(Slid_Orientations[i])
+            pose = [Slid_Positions[i][0], Slid_Positions[i][1], Slid_Positions[i][2], Slid_Orientations[i]]
             grap_pose, prep_pose, isTOP = self.rexarm.check_fesible_IK(pose, 20, False, "ARB")
             print("grap_pose",grap_pose[0,0])
 
@@ -190,7 +190,7 @@ class StateMachine():
             self.rexarm.pause(1)
             self.rexarm.toggle_gripper()
        
-            self.rexarm.interpolating_in_WS(grap_pose[0:3,0:3], Slid_Positions[i], Slid_Positions[i+1], 10)
+            self.rexarm.interpolating_in_WS(grap_pose[0:3,0:3], Slid_Positions[i], Slid_Positions[i+1], 15)
             self.rexarm.toggle_gripper()
             
             self.rexarm.joints[1].set_position(0)
