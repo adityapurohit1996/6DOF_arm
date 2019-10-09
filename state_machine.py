@@ -164,20 +164,22 @@ class StateMachine():
         self.status_message = "State: BlockSlider - Completes Event in Competition"
         self.current_state = "Grab_Place"
         self.rexarm.set_speeds_normalized_global(0.1,update_now=True)
-        self.rexarm.open_gripper()
+        # self.rexarm.open_gripper()
         
         #Motion Planning
         Slid_Positions = np.array([[-200, 200, 20], [0, 200, 20], 
                                    [200, 200, 20], [200, 0, 20],
                                    [200, -200, 20], [0, -200, 20],
-                                   [-200, 200, 20], [-200, 0, 20],
+                                   [-200, -200, 20], [-200, 0, 20],
                                    [-200,200,20]])
+
         
         Slid_Orientations = np.array([[np.pi*3/4, np.pi*3/4,0], [np.pi/4, np.pi*3/4,0],
                                       [np.pi/4, np.pi*3/4, 0], [-np.pi/4, np.pi*3/4, 0],
                                       [-np.pi/4, np.pi*3/4, 0], [-np.pi*3/4, np.pi*3/4, 0],
                                       [-np.pi*3/4, np.pi*3/4, 0], [np.pi*3/4, np.pi*3/4, 0] ])
-
+        # Slid_Orientations = np.array([[-np.pi*3/4, np.pi*3/4, 0],
+        #                               [-np.pi*3/4, np.pi*3/4, 0], [np.pi*3/4, np.pi*3/4, 0] ])
         
         for i in range(len(Slid_Positions)-1):
             pose = [Slid_Positions[i][0], Slid_Positions[i][1], Slid_Positions[i][2], Slid_Orientations[i]]
@@ -188,13 +190,14 @@ class StateMachine():
             self.rexarm.pause(2)
             self.rexarm.set_pose(grap_pose)
             self.rexarm.pause(1)
-            self.rexarm.toggle_gripper()
+            # self.rexarm.toggle_gripper()
        
-            self.rexarm.interpolating_in_WS(grap_pose[0:3,0:3], Slid_Positions[i], Slid_Positions[i+1], 15)
-            self.rexarm.toggle_gripper()
+            self.rexarm.interpolating_in_WS(grap_pose[0:3,0:3], Slid_Positions[i], Slid_Positions[i+1], 10)
+            # self.rexarm.toggle_gripper()
             
             self.rexarm.joints[1].set_position(0)
             self.rexarm.joints[2].set_position(0)
+            self.rexarm.pause(2)
 
 
         #Finished
@@ -389,19 +392,28 @@ class StateMachine():
         self.status_message = "State: execute - task 1.2"
         self.current_state = "execute"
        
-        waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
-                    [ 1.0, 0.8, 1.0, 0.5, 1.0],
-                    [-1.0,-0.8,-1.0,-0.5, -1.0],
-                    [-1.0, 0.8, 1.0, 0.5, 1.0],
-                    [1.0, -0.8,-1.0,-0.5, -1.0],
-                    [ 0.0, 0.0, 0.0, 0.0, 0.0]])
+        # waypoints = np.array([[ 0.0, 0.0, 0.0, 0.0, 0.0],
+        #             [ 1.0, 0.8, 1.0, 0.5, 1.0],
+        #             [-1.0,-0.8,-1.0,-0.5, -1.0],
+        #             [-1.0, 0.8, 1.0, 0.5, 1.0],
+        #             [1.0, -0.8,-1.0,-0.5, -1.0],
+        #             [ 0.0, 0.0, 0.0, 0.0, 0.0]])
         """            
         waypoints = self.rexarm.waypoints_recorded
         """
-        for point in waypoints:
-                    print(point)
-                    self.rexarm.set_positions(point)
-                    self.rexarm.pause(3)
+        # for point in waypoints:
+        #             print(point)
+        #             self.rexarm.set_positions(point)
+        #             self.rexarm.pause(3)
+        
+        dpoint = [150,50,0]
+        oreintation = [0, np.pi, 0]
+        dpoint.append(oreintation)
+        pose = dpoint
+
+        # grap_pose, prep_pose, isTOP = self.rexarm.check_fesible_IK(pose, 0, False, "ARB")
+        # self.rexarm.set_pose(grap_pose)
+        self.rexarm.set_positions(np.array([18.8,  48.22673761 , 82.38975168,   0.   ,       49.38351072, 18.43494882])*np.pi/180)
 
         # self.rexarm.waypoints_recorded = []
         # self.rexarm.set_torque_limits([0/100.0]*self.rexarm.num_joints,update_now = True)

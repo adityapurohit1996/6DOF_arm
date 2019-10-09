@@ -91,14 +91,14 @@ def IK(pose, DH_table):
     theta1 = clamp_if_close_to_angle(theta1, 180) 
 
     Zd = Z0w - d1
-    if(theta1 == 0):
+    if(abs(np.sin(theta1)) < 10e-3):
         r = X0w/np.cos(theta1)
     else:
         r = Y0w/np.sin(theta1)    # theta1 might = 90
 
     # theta2, theta3 could be 2 set
     cos_theta3 = (Zd**2+r**2-a2**2-d4**2) / (2*a2*d4)
-
+    print("Cos theta3: ", cos_theta3)
     if(cos_theta3 <= 1):
         REACHABLE = True
 

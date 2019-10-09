@@ -50,12 +50,18 @@ class Rexarm():
         self.move_fb = [0] *  self.num_joints
 
         # DH = [theta, di, ai, alpha]
-        self.DH_table = np.array([[0, 117.52, 0, -90],
+        # self.DH_table = np.array([[0, 117.52, 0, -90],  # Gripper
+        #                 [-90, 0, 99.58, 0],
+        #                 [90, 0, 0, 90],
+        #                 [0, 110.46, 0, -90],
+        #                 [0, 0, 0, 90],
+        #                 [0, 130.66, 0, 0]])
+        self.DH_table = np.array([[0, 117.52, 0, -90],  # Tooltip
                         [-90, 0, 99.58, 0],
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
                         [0, 0, 0, 90],
-                        [0, 130.66, 0, 0]])
+                        [0, 111.95, 0, 0]])
 
     def initialize(self):
         for joint in self.joints:
@@ -141,8 +147,8 @@ class Rexarm():
             if(change_pose):
                 print("======= CHANGing POSE ==========")
                 print(" ")
-                self.toggle_gripper()
-                self.pause(1.5)
+                # self.toggle_gripper()
+                # self.pause(1.5)
                 
                 previous_joint[2] = 0
                 print("UP!! joint: ", previous_joint)
@@ -153,21 +159,21 @@ class Rexarm():
                 joints[2] = 0
                 print("Rotate!! joint: ", joints)
                 self.set_positions(joints)
-                self.pause(2)
+                self.pause(1)
 
                 joints[2] = theta3
                 print("Down!!!  joint: ", joints)
                 self.set_positions(joints)
                 self.pause(1.5)
 
-                self.toggle_gripper()
-                self.pause(1.5)
+                # self.toggle_gripper()
+                # self.pause(1.5)
 
-                self.joints[5].set_position(1.167)
+                # self.joints[5].set_position(1.167)
                 print("======= Changing DONE =========")
             else:
                 print("GOGO")
-                print("joint: ", joints)
+                # print("joint: ", joints)
                 self.set_positions(joints)
 
                 # print("Previous: ", previous_joint)
@@ -254,19 +260,20 @@ class Rexarm():
             T_grab[1,3] = Y
             T_grab[2,3] = Z
 
-            _, REACHABLE_grab = IK(T_grab, self.DH_table)
+            joints, REACHABLE_grab = IK(T_grab, self.DH_table)
+            print("ARB joints: ", joints)
 
             T_prep = np.copy(T_grab)
-            T_prep[0,3] = X - delta_Z*np.cos(theta)*np.cos(angles[1])
-            T_prep[1,3] = Y - delta_Z*np.sin(theta)*np.cos(angles[1])
-            T_prep[2,3] = Z - delta_Z*np.sin(angles[1])
+            T_prep[0,3] = X + delta_Z*np.cos(theta)*np.cos(angles[1])
+            T_prep[1,3] = Y + delta_Z*np.sin(theta)*np.cos(angles[1])
+            T_prep[2,3] = Z + delta_Z*np.sin(angles[1])
             _, REACHABLE_side = IK(T_prep, self.DH_table)
 
+            print("ARB:   ")
             print("grab: ", REACHABLE_grab, "  prep: ", REACHABLE_side)
             if REACHABLE_grab and REACHABLE_side:
                 grap_pose = T_grab
                 prep_pose = T_prep
-                print("WHY??")
             else:
                 T_grab[:] = np.nan
                 T_prep[:] = np.nan
@@ -317,7 +324,7 @@ class Rexarm():
 
     def set_pose(self, pose, update_now = True):
         joint_angles, isGOOD = IK(pose, self.DH_table)
-        print("Joint angles from IK: ", joint_angles)
+        print("Joint angles from IK: ", joint_angles * 180/np.pi)
         # self.set_positions(joint_angles, update_now)
         if(isGOOD):
             self.set_positions(joint_angles[0:6], update_now)
@@ -419,7 +426,13 @@ class Rexarm():
 
     def get_wrist_pose(self):
         """TODO"""
-        T = FK_dh(self.joint_angles_fb, self.DH_table)
+        joints = self.joint_angles_fb.copy()
+
+        if(self.num_joints <= 5):
+            joints.append(0)
+            T = FK_dh(joints, self.DH_table)
+        else:
+            T = FK_dh(self.joint_angles_fb, self.DH_table)
 
         R = get_euler_angles_from_T(T)/np.pi*180
         D = np.dot(T,np.transpose([0, 0, 0, 1]))
