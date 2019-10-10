@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from PyQt4.QtGui import QImage
 import freenect
+import csv
 
 class Kinect():
     def __init__(self):
@@ -22,6 +23,7 @@ class Kinect():
         self.rgb_click_points = np.zeros((5,2),int)
         self.depth_click_points = np.zeros((5,2),int)
         self.world_frame = np.zeros(3)
+        self.writeToFile = False
 
         '''
         # self.file = np.loadt("projection.cfg",'a+')
@@ -309,8 +311,25 @@ class Kinect():
 
 
         
+    def getWorldCoordinates(self, Contour_IC):
+        Contour_WC = list()
+        for coord in Contour_IC:
+            world_coordinates = self.rgb2world(int(coord[0]),int(coord[1]))
+            Contour_WC.append(world_coordinates)
+        print(Contour_WC)
+        '''
+        result_file = open("Contour_data.csv",'wb')
+        wr = csv.writer(result_file, dialect='excel',delimiter=',')
+        for item in Contour_WC:
+            for number in item:
+                wr.writerow(float(number))
+        '''
+        result_file = open("Contour_data.csv",'ab')
+        for item in Contour_WC:
+            np.savetxt(result_file, [item], delimiter=',', fmt='%d')
+        result_file.close()
 
-
+        
     def detectBlocksInDepthImage(self):
         I_depth = self.currentDepthFrame
         #print(I_depth.shape)
@@ -326,8 +345,8 @@ class Kinect():
             rgb = (1/Zc) * np.dot(np.linalg.inv(self.projection),wc)
             bounding_rgb[i,:] = rgb
        '''
-        ROI[100:460,146:490] = I_depth[100:460,146:490]
-        ROI[200:340,250:360] = 0
+        ROI[80:480,120:510] = I_depth[80:480,120:510]
+        ROI[230:300,280:340] = 0
         
         ret, I_th = cv2.threshold(ROI, 200, 255, cv2.THRESH_BINARY_INV)
         I_th = cv2.blur(I_th, (7,7))
@@ -376,9 +395,14 @@ class Kinect():
            #print(self.Contour_IC)
         else :
             self.Contour_IC = list()
+        if not(self.writeToFile) :
+
+             self.getWorldCoordinates(self.Contour_IC)
+             self.writeToFile = True
 
        # self.detectColor()
         #self.findColorPosition('Red')
+        
         return I_th
 
 
