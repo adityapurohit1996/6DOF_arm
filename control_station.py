@@ -160,6 +160,7 @@ class Gui(QMainWindow):
         self.ui.btnUser8.setText("Pick_N_Stack")
         self.ui.btnUser8.clicked.connect(partial(self.sm.set_next_state, "Pick_N_Stack"))
         
+        self.ui.btn_task1.clicked.connect(partial(self.sm.set_next_state, "TO_0"))
 
 
         """initalize manual control off"""

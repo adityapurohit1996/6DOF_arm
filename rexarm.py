@@ -61,7 +61,7 @@ class Rexarm():
                         [90, 0, 0, 90],
                         [0, 110.46, 0, -90],
                         [0, 0, 0, 90],
-                        [0, 111.95, 0, 0]])
+                        [0, 107.7, 0, 0]])
 
     def initialize(self):
         for joint in self.joints:

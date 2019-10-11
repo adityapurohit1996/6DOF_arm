@@ -71,7 +71,11 @@ class StateMachine():
                 self.BlockSlider(1)
             if(self.next_state == "Pick_N_Stack"):
                 self.Pick_N_Stack(3)
-
+            if(self.next_state == "TO_0"):
+                self.rexarm.set_positions(np.zeros((6,1)))
+                self.rexarm.get_feedback()
+                self.current_state = "TO_0"
+                self.next_state = "idle"
                 
         if(self.current_state == "estop"):
             self.next_state = "estop"
@@ -118,6 +122,9 @@ class StateMachine():
             if(self.next_state == "idle"):
                 self.idle()
         
+        if(self.current_state == "TO_0"):
+            if(self.next_state == "idle"):
+                self.idle()
                 
                
 
@@ -398,7 +405,7 @@ class StateMachine():
         #             [-1.0, 0.8, 1.0, 0.5, 1.0],
         #             [1.0, -0.8,-1.0,-0.5, -1.0],
         #             [ 0.0, 0.0, 0.0, 0.0, 0.0]])
-        """            
+        """             
         waypoints = self.rexarm.waypoints_recorded
         """
         # for point in waypoints:
@@ -406,14 +413,16 @@ class StateMachine():
         #             self.rexarm.set_positions(point)
         #             self.rexarm.pause(3)
         
-        dpoint = [150,50,0]
+        dpoint = [0,-200,0]
+        dpoint = [0,-150,100] 
+        # dpoint = [-141,-141,0]
         oreintation = [0, np.pi, 0]
         dpoint.append(oreintation)
         pose = dpoint
 
-        # grap_pose, prep_pose, isTOP = self.rexarm.check_fesible_IK(pose, 0, False, "ARB")
-        # self.rexarm.set_pose(grap_pose)
-        self.rexarm.set_positions(np.array([18.8,  48.22673761 , 82.38975168,   0.   ,       49.38351072, 18.43494882])*np.pi/180)
+        grap_pose, prep_pose, isTOP = self.rexarm.check_fesible_IK(pose, 0, False, "ARB")
+        self.rexarm.set_pose(grap_pose)
+        # self.rexarm.set_positions(np.array([18.8,  48.22673761 , 82.38975168,   0.   ,       49.38351072, 18.43494882])*np.pi/180)
 
         # self.rexarm.waypoints_recorded = []
         # self.rexarm.set_torque_limits([0/100.0]*self.rexarm.num_joints,update_now = True)
